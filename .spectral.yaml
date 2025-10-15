@@ -1,0 +1,11 @@
+extends: spectral:oas
+
+rules:
+  operation-operationId: true
+  operation-tags: true
+  operation-description: true
+  info-contact: true
+  info-description: true
+  no-$ref-siblings: true
+  openapi-tags: true
+  path-params: true

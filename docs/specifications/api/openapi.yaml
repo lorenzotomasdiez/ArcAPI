@@ -186,8 +186,8 @@ paths:
                 vencimiento_cae: "2025-10-25"
                 status: "approved"
                 cliente:
-                  documento_tipo: "CUIT"
-                  documento_numero: "20-12345678-9"
+                  documento_tipo: 80
+                  documento_numero: "20123456789"
                   razon_social: "Juan Pérez"
                   email: "juan@example.com"
                   condicion_iva: "responsable_inscripto"
@@ -218,8 +218,31 @@ paths:
               example:
                 id: "550e8400-e29b-41d4-a716-446655440000"
                 status: "pending_retry"
+                fecha_emision: "2025-10-15"
                 numero_completo: null
                 cae: null
+                cliente:
+                  documento_tipo: 80
+                  documento_numero: "20123456789"
+                  razon_social: "Juan Pérez"
+                  email: "juan@example.com"
+                  condicion_iva: "responsable_inscripto"
+                items:
+                  - orden: 1
+                    descripcion: "Consultoría técnica"
+                    cantidad: 3
+                    precio_unitario: 5000
+                    iva_porcentaje: 21
+                    subtotal: 15000
+                    iva_importe: 3150
+                    total: 18150
+                subtotal: 15000
+                iva_total: 3150
+                tributos_total: 0
+                total: 18150
+                moneda: "ARS"
+                created_at: "2025-10-15T14:30:00Z"
+                updated_at: "2025-10-15T14:30:00Z"
                 message: "ARCA did not respond in time. Invoice will be processed in the background. Check status via GET /invoices/{id}"
         '400':
           $ref: '#/components/responses/BadRequest'
@@ -359,21 +382,53 @@ paths:
                     status: "approved"
                     fecha_emision: "2025-10-15"
                     cliente:
+                      documento_tipo: 80
+                      documento_numero: "20123456789"
                       razon_social: "Juan Pérez"
-                      documento_numero: "20-12345678-9"
+                      condicion_iva: "responsable_inscripto"
+                    items:
+                      - orden: 1
+                        descripcion: "Consultoría técnica"
+                        cantidad: 3
+                        precio_unitario: 5000
+                        iva_porcentaje: 21
+                        subtotal: 15000
+                        iva_importe: 3150
+                        total: 18150
+                    subtotal: 15000
+                    iva_total: 3150
+                    tributos_total: 0
                     total: 18150
+                    moneda: "ARS"
                     cae: "72345678901234"
                     created_at: "2025-10-15T14:30:00Z"
+                    updated_at: "2025-10-15T14:30:00Z"
                   - id: "660e8400-e29b-41d4-a716-446655440001"
                     numero_completo: "0001-00000122"
                     status: "approved"
                     fecha_emision: "2025-10-14"
                     cliente:
+                      documento_tipo: 80
+                      documento_numero: "30111111112"
                       razon_social: "Empresa SA"
-                      documento_numero: "30-11111111-2"
-                    total: 50000
+                      condicion_iva: "responsable_inscripto"
+                    items:
+                      - orden: 1
+                        descripcion: "Servicios profesionales"
+                        cantidad: 1
+                        precio_unitario: 50000
+                        iva_porcentaje: 21
+                        subtotal: 50000
+                        iva_importe: 10500
+                        total: 60500
+                    subtotal: 50000
+                    iva_total: 10500
+                    tributos_total: 0
+                    total: 60500
+                    moneda: "ARS"
                     cae: "72345678901233"
                     created_at: "2025-10-14T10:15:00Z"
+                    updated_at: "2025-10-14T10:15:00Z"
                 pagination:
                   total: 145
                   limit: 20
@@ -422,8 +477,8 @@ paths:
                 vencimiento_cae: "2025-10-25"
                 status: "approved"
                 cliente:
-                  documento_tipo: "CUIT"
-                  documento_numero: "20-12345678-9"
+                  documento_tipo: 80
+                  documento_numero: "20123456789"
                   razon_social: "Juan Pérez"
                   email: "juan@example.com"
                   condicion_iva: "responsable_inscripto"
@@ -501,6 +556,10 @@ paths:
               $ref: '#/components/schemas/InvoiceUpdateRequest'
             example:
               cliente:
+                documento_tipo: 80
+                documento_numero: "20123456789"
+                razon_social: "Juan Pérez"
+                condicion_iva: "responsable_inscripto"
                 email: "nuevo_email@example.com"
               items:
                 - descripcion: "Consultoría técnica actualizada"
@@ -518,8 +577,31 @@ paths:
               example:
                 id: "550e8400-e29b-41d4-a716-446655440000"
                 status: "approved"
+                fecha_emision: "2025-10-15"
                 numero_completo: "0001-00000123"
                 cae: "72345678901235"
+                vencimiento_cae: "2025-10-25"
+                cliente:
+                  documento_tipo: 80
+                  documento_numero: "20123456789"
+                  razon_social: "Juan Pérez"
+                  email: "nuevo_email@example.com"
+                  condicion_iva: "responsable_inscripto"
+                items:
+                  - orden: 1
+                    descripcion: "Consultoría técnica actualizada"
+                    cantidad: 5
+                    precio_unitario: 5000
+                    iva_porcentaje: 21
+                    subtotal: 25000
+                    iva_importe: 5250
+                    total: 30250
+                subtotal: 25000
+                iva_total: 5250
+                tributos_total: 0
+                total: 30250
+                moneda: "ARS"
+                created_at: "2025-10-15T14:30:00Z"
                 updated_at: "2025-10-15T15:00:00Z"
         '400':
           $ref: '#/components/responses/BadRequest'
@@ -1099,7 +1181,7 @@ components:
         numero_completo:
           type: string
           nullable: true
-          description: Complete invoice number (formato: PPPP-NNNNNNNN)
+          description: "Complete invoice number (format: PPPP-NNNNNNNN)"
           example: "0001-00000123"
         punto_venta:
           type: integer
@@ -1154,14 +1236,7 @@ components:
           enum: [pending, approved, failed, pending_retry]
           example: "approved"
         cliente:
-          allOf:
-            - $ref: '#/components/schemas/Cliente'
-            - type: object
-              properties:
-                documento_tipo:
-                  type: string
-                  description: Document type (human-readable)
-                  example: "CUIT"
+          $ref: '#/components/schemas/Cliente'
         items:
           type: array
           description: Invoice line items
