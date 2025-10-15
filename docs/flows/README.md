@@ -14,79 +14,69 @@ All diagrams use Mermaid format for version control and GitHub rendering.
 
 ## Status
 
-> **Status**: TODO - Pending completion in Task #5
+> **Status**: ✅ Complete - 5 Critical Flows Documented
 >
-> Flow diagrams will be created in **Task #5: Document System Flows** (Week 2-3)
+> Completed in **Task #6: Create Critical Flow Diagrams**
 
-## Planned Flow Documents
+## Flow Documents
 
-### User Flows (TODO - Task #5)
+### User Flows ✅
+
+**Document**: [user-flows.md](./user-flows.md)
 
 User interaction flows from client perspective:
 
-1. **User Registration & Onboarding**
-   - Account creation
-   - Certificate upload
-   - First API key generation
-   - Sandbox testing
+1. **✅ Invoice Creation (Simple Mode)** - [View Flow](./user-flows.md#flow-1-invoice-creation-simple-mode)
+   - Natural language input to AI Service
+   - Invoice structure generation with IVA calculation
+   - ARCA submission and CAE retrieval
+   - Error handling and retry logic
+   - **Target Latency**: P95 < 4 seconds
 
-2. **Invoice Creation (Simple Mode)**
-   - Natural language input
-   - AI generation
+2. **✅ Invoice Creation (Advanced Mode)** - [View Flow](./user-flows.md#flow-2-invoice-creation-advanced-mode)
+   - Structured data input (no AI processing)
+   - Direct schema validation
    - ARCA submission
-   - Result notification
+   - **Target Latency**: P95 < 2 seconds
 
-3. **Invoice Creation (Advanced Mode)**
-   - Structured data input
-   - Validation
-   - ARCA submission
-   - CAE retrieval
+3. **✅ Certificate Upload & Authentication Setup** - [View Flow](./user-flows.md#flow-3-certificate-upload--authentication-setup)
+   - One-time certificate upload and encryption
+   - Test authentication with ARCA
+   - Token caching strategy (12h ARCA expiry, 10h cache TTL)
+   - Automatic token renewal on cache miss
+   - **Target Latency**: P95 < 3 seconds
 
-4. **Webhook Configuration**
-   - Create webhook endpoint
-   - Configure events
-   - Test delivery
-   - Monitor status
+### System Flows ✅
 
-5. **AI Invoice Generation**
-   - Description parsing
-   - Context enrichment
-   - Structured output
-   - Validation
-
-### System Flows (TODO - Task #5)
+**Document**: [system-flows.md](./system-flows.md)
 
 Internal service interaction flows:
 
-1. **Request Lifecycle**
-   - Client → API Gateway → Auth → Service → Response
-   - Error handling at each stage
-   - Logging and tracing
+1. **✅ ARCA Integration & Error Handling** - [View Flow](./system-flows.md#flow-4-arca-integration--error-handling)
+   - Complete request validation pipeline (auth, rate limits, quotas)
+   - Multi-layer error handling with proper HTTP status codes
+   - Intelligent retry logic with exponential backoff
+   - Circuit breaker pattern for ARCA outages
+   - Background job processing for timeouts
+   - **Includes**: Comprehensive flowchart with all decision points
 
-2. **Authentication Flow**
-   - API key validation
-   - JWT generation
-   - ARCA certificate authentication
-   - Token caching and renewal
+2. **✅ Webhook Delivery with Retries** - [View Flow](./system-flows.md#flow-5-webhook-delivery-with-retries)
+   - At-least-once delivery guarantee
+   - HMAC-SHA256 signature for security
+   - Exponential backoff retry strategy (1min, 5min, 15min)
+   - Distinguishes client errors (4xx, no retry) vs server errors (5xx, retry)
+   - Idempotency handling with delivery IDs
+   - **Includes**: Detailed sequence diagram with all retry paths
 
-3. **Webhook Delivery Flow**
-   - Event trigger
-   - Queue processing
-   - Delivery attempts
-   - Retry logic with exponential backoff
-   - Success/failure tracking
+### Planned Additional Flows (Future)
 
-4. **Background Job Processing**
-   - PDF generation
-   - Email sending
-   - Analytics aggregation
-   - Cleanup tasks
+The following flows may be added in future documentation tasks:
 
-5. **Error Handling & Circuit Breaker**
-   - Error detection
-   - Circuit breaker activation
-   - Fallback behavior
-   - Recovery
+- **User Registration & Onboarding** - Account creation and first API key
+- **Webhook Configuration** - Dashboard-based webhook management
+- **AI Invoice Generation Deep Dive** - Detailed AI processing internals
+- **Background Job Processing** - PDF generation, email sending, analytics
+- **Request Lifecycle Tracing** - Distributed tracing across services
 
 ### Data Flows (TODO - Task #5)
 
@@ -221,20 +211,30 @@ stateDiagram-v2
     Failed --> [*]
 ```
 
-## Example Flow
+## Flow Documentation Quality
 
-> **Example**: Invoice Creation (Simple Mode)
->
-> See PRD Appendix for complete example:
-> - Location: `.claude/prds/engineering-documentation.md` lines 1246-1406
-> - Includes: Overview, actors, preconditions, detailed diagram, step-by-step, error handling, performance targets
+All documented flows include:
 
-Key elements:
-- Sequence diagram showing all actors
-- Step-by-step breakdown with timings
-- Error handling table
-- Performance targets
-- Monitoring recommendations
+✅ **Overview** - Clear 1-2 sentence description of what the flow does
+✅ **Actors** - All participants in the flow (users, services, external systems)
+✅ **Preconditions** - Required state before flow can execute
+✅ **Mermaid Diagrams** - Visual sequence or flowchart diagrams
+✅ **Step-by-Step Explanation** - Detailed narrative of each step
+✅ **Error Scenarios** - Comprehensive table of errors and handling
+✅ **Performance Targets** - P50, P95, P99 latency expectations
+✅ **Security Considerations** - Authentication, encryption, signatures
+✅ **Monitoring & Alerting** - Key metrics and alert thresholds
+
+### Example: Flow 1 (Invoice Creation - Simple Mode)
+
+View the complete flow: [user-flows.md#flow-1](./user-flows.md#flow-1-invoice-creation-simple-mode)
+
+**Highlights**:
+- 9-step detailed process from request to CAE
+- Handles 3 response scenarios (success, validation error, timeout)
+- HMAC signature verification
+- Token caching with 10-hour TTL
+- Background retry with exponential backoff
 
 ## Performance Expectations
 
@@ -300,5 +300,5 @@ Document all error paths:
 ---
 
 **Last Updated**: 2025-10-15
-**Status**: Placeholder (Flows Pending Task #5)
-**Next Task**: Task #5 - Document system flows (Week 2-3)
+**Status**: ✅ Complete (5/5 critical flows documented in Task #6)
+**Documentation Coverage**: User Flows (3), System Flows (2)
