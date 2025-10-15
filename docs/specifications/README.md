@@ -18,14 +18,14 @@ All specifications are versioned, reviewed, and validated before implementation 
 
 OpenAPI 3.1 specifications for all REST API endpoints:
 
-- Complete REST API specification (openapi.yaml)
+- [Complete REST API specification](./api/openapi.yaml) - OpenAPI 3.1 YAML file
 - Request/response schemas
 - Authentication and authorization
 - Rate limiting policies
-- Error response standards
+- Error response standards (RFC 7807)
 - API versioning strategy
 
-**Status**: Planned for Task #4 (Week 2-3)
+**Status**: In Progress - Task #4 (Streams A-D active)
 
 ### [Service Contracts](./services/README.md)
 
