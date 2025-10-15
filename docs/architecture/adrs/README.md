@@ -51,26 +51,29 @@ Each ADR follows this structure:
 
 ## ADR Index
 
-> **Status**: TODO - ADRs will be created in Tasks #3-4
->
-> The following ADRs will be documented as architectural decisions are made:
+> **Status**: Active - Core ADRs completed, additional ADRs will be added as needed
+
+### Completed ADRs
+
+1. **[ADR-001: Database Selection](./001-database-postgresql.md)** ✅ Accepted
+   - **Decision**: PostgreSQL 15 on AWS RDS or Supabase
+   - **Rationale**: ACID compliance, JSONB support, full-text search, cost-effective
+   - **Alternatives**: MongoDB, MySQL, DynamoDB
+   - **Date**: 2025-10-15
+
+2. **[ADR-002: Authentication Strategy](./002-authentication.md)** ✅ Accepted
+   - **Decision**: Dual authentication (API keys for consumers, certificate-based for ARCA)
+   - **Rationale**: Simple developer experience, secure certificate management, token caching
+   - **Alternatives**: OAuth 2.0, JWT, Basic Auth
+   - **Date**: 2025-10-15
+
+3. **[ADR-003: Deployment Platform](./003-deployment-platform.md)** ✅ Accepted
+   - **Decision**: Railway (MVP phase) → AWS ECS Fargate (scale phase)
+   - **Rationale**: Fast MVP launch, Docker-first portability, cost optimization
+   - **Alternatives**: Heroku, Google Cloud Run, Kubernetes, bare VPS
+   - **Date**: 2025-10-15
 
 ### Planned ADRs
-
-1. **ADR-001: Database Selection** (Task #3, Week 1)
-   - PostgreSQL vs MySQL vs MongoDB vs DynamoDB
-   - Decision: PostgreSQL 15+
-   - Rationale: ACID compliance, JSONB support, full-text search
-
-2. **ADR-002: Authentication Strategy** (Task #3, Week 1)
-   - API key vs OAuth2 vs JWT
-   - Decision: JWT-based API keys
-   - Rationale: Stateless, scalable, secure
-
-3. **ADR-003: Deployment Platform** (Task #3, Week 1)
-   - AWS vs GCP vs Azure vs Vercel
-   - Decision: TBD based on team expertise
-   - Considerations: Cost, managed services, DevOps complexity
 
 4. **ADR-004: API Versioning Strategy** (Task #4, Week 2)
    - URL-based vs Header-based vs Content-negotiation
@@ -156,4 +159,4 @@ See the PRD for a complete example ADR:
 
 **Last Updated**: 2025-10-15
 **Maintained By**: Tech Lead
-**Status**: Active (Index Only - ADRs Pending)
+**Status**: Active (3 ADRs Completed)
