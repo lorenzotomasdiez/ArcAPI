@@ -18,11 +18,11 @@ ARCA API is designed as a modern, cloud-native platform with multiple microservi
 
 The following documents provide comprehensive views of the system architecture:
 
-1. **[00-overview.md](./00-overview.md)** - System overview, goals, and quality attributes
-2. **[01-system-context.md](./01-system-context.md)** - C4 Level 1: System context and external actors
-3. **[02-services.md](./02-services.md)** - C4 Level 2: Service containers and interactions
-4. **[03-data-architecture.md](./03-data-architecture.md)** - Database design, caching, and data flows
-5. **[04-infrastructure.md](./04-infrastructure.md)** - Cloud infrastructure, deployment, and scaling
+1. **[00-overview.md](./00-overview.md)** - System overview, goals, and quality attributes ✅ **ACTIVE**
+2. **[01-system-context.md](./01-system-context.md)** - C4 Level 1: System context and external actors ✅ **ACTIVE**
+3. **[02-services.md](./02-services.md)** - C4 Level 2: Service containers and interactions (TODO)
+4. **[03-data-architecture.md](./03-data-architecture.md)** - Database design, caching, and data flows (TODO)
+5. **[04-infrastructure.md](./04-infrastructure.md)** - Cloud infrastructure, deployment, and scaling (TODO)
 
 ### Architecture Decision Records (ADRs)
 
@@ -180,5 +180,6 @@ Services are designed with:
 ---
 
 **Last Updated**: 2025-10-15
-**Status**: In Progress
+**Status**: Active (Overview and Context completed, Services/Data/Infrastructure in progress)
 **Next Review**: 2026-01-15
+**Task #3 - Stream A**: ✅ Complete
