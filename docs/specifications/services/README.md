@@ -39,16 +39,21 @@ Service contracts define the interfaces for internal services to communicate, in
 
 ### 2. Webhook Engine Service
 
-**File**: `webhook-service-contract.md` (TODO)
+**File**: [webhook-service-contract.md](./webhook-service-contract.md) ✓
 
 **Purpose**: Reliable event delivery to external endpoints
 
-**Contract**:
-- Input: `{ event_type: string, payload: object, webhook_id: string }`
-- Output: `{ delivery_id: string, status: 'queued' | 'delivered' | 'failed' }`
-- Error handling: Exponential backoff retry (5 attempts)
-- Performance: Queue within 100ms, deliver within 30s
-- Event format: CloudEvents 1.0 standard
+**Status**: Complete
+
+**Contract Overview**:
+- **Job Format**: Redis queue with event, webhook_url, payload, signature_secret
+- **Delivery Protocol**: HTTP POST with HMAC-SHA256 signature (X-ARCA-Signature header)
+- **Response Handling**: 2xx success, 4xx fail (no retry), 5xx retry with backoff
+- **Retry Strategy**: Exponential backoff (1min, 5min, 15min) - 3 retries default
+- **Signature**: HMAC-SHA256 for webhook verification
+- **Logging**: All deliveries logged to PostgreSQL webhook_deliveries table
+- **Performance**: P50 <2s, P95 <5s delivery latency, 1000 events/sec throughput
+- **Idempotency**: Unique delivery IDs prevent duplicate processing
 
 ### 3. Analytics Service
 
@@ -234,5 +239,6 @@ describe('AI Service Contract', () => {
 ---
 
 **Last Updated**: 2025-10-15
-**Status**: Placeholder (Contracts Pending Task #4)
-**Next Task**: Task #4 - Create service contracts (Week 3)
+**Status**: In Progress (2/5 service contracts complete)
+**Completed**: AI Service Contract, Webhook Service Contract
+**Pending**: Analytics Service, MCP Server, ARCA SOAP Client
