@@ -13,15 +13,21 @@ This section provides everything a developer needs to:
 
 ## Status
 
-> **Status**: TODO - Pending completion in Task #6
+> **Status**: In Progress - Task #7: Write Development Guides
 >
-> Development guides will be created in **Task #6: Create Development Guides** (Week 4)
+> ✅ Local Development Setup Guide - **COMPLETED** (Stream A)
+>
+> 🔄 Coding Standards Guide - In Progress (Stream B)
+>
+> 🔄 Testing Strategy Guide - In Progress (Stream C)
 
-## Planned Documents
+## Available Documents
 
-### 1. Local Development Setup (TODO - Task #6)
+### 1. Local Development Setup ✅
 
-**File**: `setup.md`
+**File**: [`setup.md`](./setup.md)
+
+**Status**: Complete
 
 Complete guide to setting up local development environment:
 
@@ -54,9 +60,29 @@ Complete guide to setting up local development environment:
   - Sandbox account setup
   - Mock ARCA API for offline development
 
-**Goal**: New engineer can run full stack locally in <1 hour
+**Time to Complete**: 45-60 minutes
 
-### 2. Coding Standards (TODO - Task #6)
+**What's Included**:
+- Prerequisites (Node.js, Python, Docker, PostgreSQL, Redis)
+- Environment configuration with complete .env example
+- Database setup with migrations and seeding
+- Redis cache setup
+- Development server startup (API, Dashboard, AI Service)
+- Testing setup and verification
+- ARCA certificate configuration for homologación
+- Comprehensive troubleshooting guide
+- Verification checklist
+
+**Key Features**:
+- All commands are copy-paste ready
+- Tested on macOS, Linux, and Windows (WSL2)
+- Includes Docker and local installation options
+- Covers common issues and solutions
+- Links to next steps and related documentation
+
+👉 **[Read Setup Guide](./setup.md)**
+
+### 2. Coding Standards (TODO - Stream B)
 
 **File**: `coding-standards.md`
 
@@ -88,7 +114,7 @@ Language-specific coding standards:
 - Maximum function length: 50 lines
 - Maximum file length: 300 lines
 
-### 3. Testing Strategy (TODO - Task #6)
+### 3. Testing Strategy (TODO - Stream C)
 
 **File**: `testing-strategy.md`
 
@@ -129,7 +155,7 @@ Comprehensive testing approach:
 - Memory usage limits
 - Database query performance
 
-### 4. Git Workflow (TODO - Task #6)
+### 4. Git Workflow (TODO - Future Task)
 
 **File**: `git-workflow.md`
 
@@ -171,7 +197,7 @@ Closes #42
 5. Address feedback
 6. Squash merge to `develop`
 
-### 5. Code Review Guidelines (TODO - Task #6)
+### 5. Code Review Guidelines (TODO - Future Task)
 
 **File**: `code-review.md`
 
@@ -207,7 +233,7 @@ What to look for in code reviews:
 - Complex logic explained?
 - README updated if needed?
 
-### 6. Debugging Guide (TODO - Task #6)
+### 6. Debugging Guide (TODO - Future Task)
 
 **File**: `debugging.md`
 
@@ -334,5 +360,5 @@ npm run format:fix
 ---
 
 **Last Updated**: 2025-10-15
-**Status**: Placeholder (Guides Pending Task #6)
-**Next Task**: Task #6 - Create development guides (Week 4)
+**Status**: In Progress (Task #7 - Stream A Complete)
+**Next**: Streams B & C (Coding Standards & Testing Strategy)
