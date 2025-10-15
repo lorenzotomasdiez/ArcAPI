@@ -17,9 +17,9 @@ This section provides everything a developer needs to:
 >
 > ✅ Local Development Setup Guide - **COMPLETED** (Stream A)
 >
-> 🔄 Coding Standards Guide - In Progress (Stream B)
+> ✅ Coding Standards Guide - **COMPLETED** (Stream B)
 >
-> 🔄 Testing Strategy Guide - In Progress (Stream C)
+> ✅ Testing Strategy Guide - **COMPLETED** (Stream C)
 
 ## Available Documents
 
@@ -82,78 +82,125 @@ Complete guide to setting up local development environment:
 
 👉 **[Read Setup Guide](./setup.md)**
 
-### 2. Coding Standards (TODO - Stream B)
+### 2. Coding Standards ✅
 
-**File**: `coding-standards.md`
+**File**: [`coding-standards.md`](./coding-standards.md)
 
-Language-specific coding standards:
+**Status**: Complete
 
-**TypeScript/JavaScript:**
-- ESLint configuration
-- Prettier formatting
-- Naming conventions (camelCase, PascalCase)
-- File organization
-- Import ordering
-- Error handling patterns
-- Async/await best practices
+Comprehensive coding standards and style guidelines for consistent code quality:
 
-**Python:**
-- Black formatting
-- Flake8/Pylint rules
-- Type hints (mypy)
+**TypeScript Standards:**
+- Naming conventions (kebab-case, camelCase, PascalCase, UPPER_SNAKE_CASE)
+- File structure and organization (feature-based)
+- Code style (indentation, quotes, semicolons, line length)
+- Type annotations (when required, when optional)
+- Error handling patterns (custom error classes)
+- Import ordering and export styles
+
+**Python Standards:**
+- PEP 8 + Black formatting
+- Naming conventions (snake_case, PascalCase)
+- Type hints required for all functions
 - Docstring format (Google style)
-- Import organization
-- Error handling
+- Linting tools (ruff, mypy)
 
-**General Principles:**
-- DRY (Don't Repeat Yourself)
-- SOLID principles
-- Functional programming where appropriate
-- Clear variable/function names
-- Comments for "why", not "what"
-- Maximum function length: 50 lines
-- Maximum file length: 300 lines
+**Linting & Formatting:**
+- `.eslintrc.json` - ESLint configuration with Airbnb TypeScript base
+- `.prettierrc.json` - Prettier configuration for consistent formatting
+- Pre-commit hooks (Husky + lint-staged)
+- VS Code settings for auto-formatting
 
-### 3. Testing Strategy (TODO - Stream C)
+**What's Included**:
+- Complete naming convention reference with examples
+- File structure diagrams for backend and frontend
+- Code style rules (enforced by tools)
+- Type annotation guidelines
+- Error handling patterns with custom error classes
+- Good vs bad code examples
+- ESLint and Prettier configurations
+- Pre-commit hook setup instructions
+- Code review checklist
 
-**File**: `testing-strategy.md`
+**Key Features**:
+- Real code examples showing good vs bad patterns
+- Sample ESLint and Prettier config files
+- Integration with VS Code for auto-formatting
+- Comprehensive error handling patterns
+- TypeScript strict mode guidelines
+- Python type hints and linting setup
 
-Comprehensive testing approach:
+👉 **[Read Coding Standards Guide](./coding-standards.md)**
+
+### 3. Testing Strategy ✅
+
+**File**: [`testing-strategy.md`](./testing-strategy.md)
+
+**Status**: Complete
+
+Comprehensive testing approach following the Testing Pyramid:
+
+**Testing Pyramid Distribution:**
+- 70% Unit Tests - Fast, isolated, catch most bugs
+- 25% Integration Tests - Verify component interactions
+- 5% E2E Tests - Critical user journeys
+
+**Coverage Targets:**
+- Minimum: 80% (enforced in CI)
+- Preferred: 90% (critical modules)
+- Measured: Lines, branches, functions, statements
 
 **Unit Tests:**
 - Coverage target: 80%+
 - Test framework: Jest (JS), pytest (Python)
 - Mock external dependencies
-- Fast execution (<5 minutes)
+- Fast execution (<30 seconds for 500 tests)
+- Code examples: Invoice calculations, data validation, error handling
 
 **Integration Tests:**
 - Test service interactions
-- Use test database
+- Use test database (PostgreSQL test instance)
 - Mock external APIs (ARCA, OpenAI)
 - Run in CI pipeline
+- Code examples: API endpoints, database transactions, service mocks
 
 **End-to-End Tests:**
-- Full flow testing
-- Use Playwright/Cypress
-- Run against staging
-- Cover critical paths
+- Framework: Playwright or Cypress
+- Full flow testing (5-10 critical paths)
+- Cover critical user journeys
+- Mock strategy for unreliable AFIP API
+- Code examples: Invoice creation flow, certificate upload, webhook delivery
 
-**Contract Tests:**
-- Validate API specs (OpenAPI)
-- Validate service contracts
-- Ensure backward compatibility
-- Generate from specifications
+**Configuration:**
+- `jest.config.js` - Jest configuration with coverage thresholds
+- TypeScript support via ts-jest
+- Parallel test execution
+- Coverage reporting (HTML, LCOV, JSON)
 
-**Load Tests:**
-- k6 or Artillery
-- Simulate 1000 req/min
-- Identify bottlenecks
-- Run before releases
+**Time to Complete**: Comprehensive guide with code examples
 
-**Performance Benchmarks:**
-- P95 latency targets
-- Memory usage limits
-- Database query performance
+**What's Included**:
+- Testing Pyramid explanation and distribution
+- Coverage targets and measurement strategy
+- Unit testing framework and examples
+- Integration testing with Supertest
+- E2E testing with Playwright
+- Test organization and file structure
+- Running tests (commands for all test types)
+- CI/CD integration with GitHub Actions
+- Mocking strategies for external services
+- Performance testing with k6
+- Troubleshooting common test issues
+
+**Key Features**:
+- Complete code examples for each test type
+- Jest configuration with coverage enforcement
+- Test data factories and fixtures
+- Mock strategies for AFIP, email, database
+- CI/CD workflow examples
+- Load testing examples
+
+👉 **[Read Testing Strategy Guide](./testing-strategy.md)**
 
 ### 4. Git Workflow (TODO - Future Task)
 
@@ -360,5 +407,5 @@ npm run format:fix
 ---
 
 **Last Updated**: 2025-10-15
-**Status**: In Progress (Task #7 - Stream A Complete)
-**Next**: Streams B & C (Coding Standards & Testing Strategy)
+**Status**: Complete (Task #7 - All Streams Complete)
+**Next**: Future tasks (Git Workflow, Code Review Guidelines, Debugging Guide)
