@@ -13,24 +13,29 @@ Service contracts define the interfaces for internal services to communicate, in
 
 ## Status
 
-> **Status**: TODO - Pending completion in Task #4
+> **Status**: In Progress - Task #5 (Service Architecture)
 >
-> Service contracts will be created in **Task #4: Create API Specifications** (Week 3)
+> Service contracts are being created in **Task #5: Document Service Architecture** (Week 3)
 
-## Planned Service Contracts
+## Service Contracts
 
 ### 1. AI Invoice Generator Service
 
-**File**: `ai-service-contract.md` (TODO)
+**File**: [ai-service-contract.md](./ai-service-contract.md) ✓
 
 **Purpose**: Natural language to structured invoice conversion
 
-**Contract**:
-- Input: `{ description: string, user_context?: object }`
-- Output: `{ invoice_data: object, confidence: number, warnings: string[] }`
-- Error handling: Fallback to manual mode if AI fails
-- Performance: P95 <2 seconds
-- Authentication: Service-to-service JWT
+**Status**: Complete
+
+**Contract Overview**:
+- **Endpoint**: `POST /internal/ai/generate-invoice`
+- **Input**: `{ description: string, user_context?: object }`
+- **Output**: `{ invoice: object, ai_metadata: object }`
+- **Error handling**: RFC 7807 format, fallback to manual mode if AI fails
+- **Performance**: P50 <1.5s, P95 <3s, timeout at 5s
+- **Authentication**: Internal service JWT token
+- **Retry Strategy**: No retries (expensive AI calls)
+- **Confidence Score**: 0.0-1.0 scale for generation certainty
 
 ### 2. Webhook Engine Service
 
