@@ -1,8 +1,9 @@
 ---
 name: engineering-documentation
-status: backlog
+status: in_progress
 created: 2025-10-15T03:25:38Z
-progress: 0%
+updated: 2025-10-15T05:30:00Z
+progress: 25%
 prd: .claude/prds/engineering-documentation.md
 github: https://github.com/lorenzotomasdiez/ArcAPI/issues/1
 ---
@@ -467,8 +468,8 @@ To keep this epic <10 tasks, we explicitly **defer** these items to future work:
 
 ## Tasks Created
 
-- [ ] #2 - Setup documentation infrastructure (parallel: false)
-- [ ] #3 - Write core architecture documents (parallel: false)
+- [x] #2 - Setup documentation infrastructure (parallel: false) ✅ COMPLETED
+- [x] #3 - Write core architecture documents (parallel: false) ✅ COMPLETED
 - [ ] #4 - Create OpenAPI specification for MVP endpoints (parallel: false)
 - [ ] #5 - Document service architecture (C4 Level 2) (parallel: true)
 - [ ] #6 - Create critical flow diagrams (parallel: true)
