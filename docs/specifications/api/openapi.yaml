@@ -75,6 +75,12 @@ security:
 tags:
   - name: Invoices
     description: Electronic invoice management (creation, retrieval, updates)
+  - name: Certificates
+    description: ARCA certificate management (.pfx file upload and management)
+  - name: ReferenceData
+    description: Reference data for ARCA invoicing (invoice types, IVA rates, document types, etc.)
+  - name: ApiKeys
+    description: API key management (creation, listing, revocation)
 
 paths:
   /invoices:
@@ -543,6 +549,232 @@ paths:
                 status: 409
                 detail: "Invoice with status 'approved' cannot be updated. Cancel and recreate instead."
                 instance: "/invoices/550e8400-e29b-41d4-a716-446655440000"
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api-keys:
+    post:
+      summary: Create API key
+      description: |
+        Create a new API key for authentication.
+
+        **Important**: The full API key is only shown once in the response.
+        Store it securely - you won't be able to retrieve it again.
+
+        After creation, only the key prefix (first 8 characters) will be visible
+        when listing API keys.
+
+        ### API Key Format
+        - Production: `arc_live_` + random string
+        - Sandbox: `arc_test_` + random string
+        - Example: `arc_live_12345678abcdefghijklmnop`
+
+        ### Rate Limiting
+        Rate limits are determined by the tier:
+        - **Free tier**: 100 requests per minute
+        - **Pro tier**: 1000 requests per minute
+
+        ### Security Best Practices
+        - Store API keys securely (environment variables, secret managers)
+        - Never commit API keys to version control
+        - Rotate keys periodically
+        - Delete unused keys immediately
+        - Use different keys for different environments
+      operationId: createApiKey
+      tags:
+        - ApiKeys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyCreateRequest'
+            example:
+              name: "Production API Key"
+              tier: "pro"
+      responses:
+        '201':
+          description: API key created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiKey'
+                  - type: object
+                    required:
+                      - key
+                      - warning
+                    properties:
+                      key:
+                        type: string
+                        description: |
+                          Full API key - ONLY shown at creation time.
+                          Store this securely. You won't see it again.
+                        example: "arc_live_12345678abcdefghijklmnop"
+                      warning:
+                        type: string
+                        description: Warning message about key visibility
+                        example: "This is the only time you'll see the full API key. Store it securely."
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                name: "Production API Key"
+                prefix: "arc_live_12345678"
+                tier: "pro"
+                key: "arc_live_12345678abcdefghijklmnop"
+                warning: "This is the only time you'll see the full API key. Store it securely."
+                last_used_at: null
+                created_at: "2025-10-15T14:30:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    get:
+      summary: List API keys
+      description: |
+        Retrieve a paginated list of API keys.
+
+        **Security**: Only the key prefix (first 8 characters) is shown for security.
+        The full key is never retrievable after creation.
+
+        This endpoint helps you:
+        - Audit active API keys
+        - Identify unused keys (check `last_used_at`)
+        - Manage key lifecycle (create, track, revoke)
+
+        Results are ordered by creation date (newest first).
+      operationId: listApiKeys
+      tags:
+        - ApiKeys
+      parameters:
+        - name: limit
+          in: query
+          description: Number of API keys per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of API keys to skip
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of API keys retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApiKey'
+                  pagination:
+                    type: object
+                    required:
+                      - total
+                      - limit
+                      - offset
+                    properties:
+                      total:
+                        type: integer
+                        description: Total number of API keys
+                        example: 5
+                      limit:
+                        type: integer
+                        description: Number of items per page
+                        example: 20
+                      offset:
+                        type: integer
+                        description: Number of items skipped
+                        example: 0
+              example:
+                data:
+                  - id: "550e8400-e29b-41d4-a716-446655440000"
+                    name: "Production API Key"
+                    prefix: "arc_live_12345678"
+                    tier: "pro"
+                    last_used_at: "2025-10-15T14:30:00Z"
+                    created_at: "2025-10-14T10:00:00Z"
+                  - id: "660e8400-e29b-41d4-a716-446655440001"
+                    name: "Sandbox Testing Key"
+                    prefix: "arc_test_87654321"
+                    tier: "free"
+                    last_used_at: null
+                    created_at: "2025-10-13T09:00:00Z"
+                pagination:
+                  total: 5
+                  limit: 20
+                  offset: 0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api-keys/{id}:
+    delete:
+      summary: Revoke API key
+      description: |
+        Revoke an API key immediately.
+
+        Once revoked:
+        - The key becomes invalid immediately
+        - Any requests using this key will return `401 Unauthorized`
+        - The key cannot be recovered or reactivated
+        - You'll need to create a new key if needed
+
+        **Best Practice**: Revoke keys immediately when:
+        - The key is compromised or exposed
+        - The key is no longer needed
+        - Team member leaves who had access
+        - Rotating keys for security
+      operationId: revokeApiKey
+      tags:
+        - ApiKeys
+      parameters:
+        - name: id
+          in: path
+          description: API key unique identifier (UUID)
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '204':
+          description: API key revoked successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: API key not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: "https://arcaapi.com/errors/not-found"
+                title: "Not Found"
+                status: 404
+                detail: "API key with ID 550e8400-e29b-41d4-a716-446655440000 not found"
+                instance: "/api-keys/550e8400-e29b-41d4-a716-446655440000"
         '429':
           $ref: '#/components/responses/RateLimited'
         '500':
@@ -1063,6 +1295,101 @@ components:
           nullable: true
           description: Soft deletion timestamp (null if not deleted)
           example: null
+
+    ApiKeyCreateRequest:
+      type: object
+      description: Request to create a new API key
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: |
+            Friendly name for the API key to help identify its purpose.
+
+            Examples: "Production Server", "Development Environment", "CI/CD Pipeline"
+          example: "Production API Key"
+        tier:
+          type: string
+          description: |
+            Subscription tier for rate limiting:
+            - **free**: 100 requests per minute (default)
+            - **pro**: 1000 requests per minute
+          enum: [free, pro]
+          default: free
+          example: "pro"
+
+    ApiKey:
+      type: object
+      description: |
+        API key information.
+
+        **Security Note**: The full API key is only shown once at creation time.
+        After creation, only the prefix (first 8 characters after the environment prefix)
+        is visible.
+
+        ### API Key Format
+        Keys are prefixed based on environment:
+        - Production: `arc_live_XXXXXXXX...` (e.g., `arc_live_12345678abcdefgh`)
+        - Sandbox: `arc_test_XXXXXXXX...` (e.g., `arc_test_87654321zyxwvuts`)
+
+        ### Key Storage
+        The full key is hashed using bcrypt before storage. Only the prefix is stored
+        in plaintext for display purposes.
+
+        ### Rate Limiting
+        Rate limits are enforced per API key based on tier:
+        - **Free tier**: 100 requests per minute
+        - **Pro tier**: 1000 requests per minute
+      required:
+        - id
+        - name
+        - prefix
+        - tier
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the API key
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          description: Friendly name for the key
+          example: "Production API Key"
+        prefix:
+          type: string
+          description: |
+            Visible prefix of the API key (first 8 characters after environment prefix).
+            Used to identify the key without exposing the full secret.
+
+            Format: `arc_{env}_{prefix}...`
+          example: "arc_live_12345678"
+        tier:
+          type: string
+          description: |
+            Subscription tier determining rate limits:
+            - **free**: 100 requests per minute
+            - **pro**: 1000 requests per minute
+          enum: [free, pro]
+          example: "pro"
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            Timestamp of the last time this API key was used for authentication.
+            Helps identify inactive keys that can be safely revoked.
+
+            `null` if the key has never been used.
+          example: "2025-10-15T14:30:00Z"
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the API key was created
+          example: "2025-10-15T14:30:00Z"
 
     ProblemDetails:
       type: object
