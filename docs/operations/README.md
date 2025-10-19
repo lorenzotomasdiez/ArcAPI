@@ -89,6 +89,72 @@ Production-grade monitoring and observability strategy for ARCA API, ensuring is
 
 See [monitoring.md](./monitoring.md) for full details including code examples, alert definitions, and implementation checklist.
 
+## Runbooks
+
+**Directory**: [runbooks/](./runbooks/)
+
+Step-by-step operational procedures for diagnosing and resolving common production incidents. These runbooks are designed to be executed by on-call engineers at 3AM under pressure.
+
+**Available Runbooks:**
+
+1. **[ARCA API Down](./runbooks/arca-api-down.md)** (SEV1)
+   - **When**: ARCA government API is unavailable or timing out
+   - **Alert**: "ARCA API down (3 consecutive failures)"
+   - **Symptoms**: All invoice creation requests failing with 503 errors, ARCA timeouts in logs
+   - **Quick Action**: Enable circuit breaker to queue invoices instead of failing
+   - **Key Commands**:
+     ```bash
+     # Enable circuit breaker
+     railway run --env production pnpm config:set ARCA_CIRCUIT_BREAKER=true
+
+     # Monitor ARCA status
+     curl https://wswhomo.afip.gov.ar/wsfev1/service.asmx
+
+     # Process queued invoices when ARCA recovers
+     railway run --env production pnpm jobs:process-pending-invoices
+     ```
+   - **Expected Duration**: 2-4 hours (scheduled), 15min-2h (unplanned)
+
+2. **[Database Issues](./runbooks/database-issues.md)** (SEV1-SEV2)
+   - **When**: Database connection pool exhausted, slow queries, or locks
+   - **Alerts**: "Database connection pool exhausted", elevated P95 latency
+   - **Symptoms**: Timeouts, "too many connections" errors, slow responses, write failures
+   - **Quick Actions**:
+     - **Connection pool exhausted**: Restart API service
+     - **Slow queries**: Add missing indexes
+     - **Database locks**: Terminate blocking queries
+   - **Key Commands**:
+     ```bash
+     # Check connection pool usage
+     railway run --env production psql $DATABASE_URL -c "SELECT count(*) FROM pg_stat_activity"
+
+     # Restart service (quick fix for pool exhaustion)
+     railway restart --service arca-api --env production
+
+     # Add missing index (concurrent to avoid locks)
+     CREATE INDEX CONCURRENTLY idx_invoices_user_created ON invoices(user_id, created_at DESC);
+     ```
+   - **Covers**: Connection pool exhaustion, slow query diagnosis, database lock resolution
+
+**Quick Reference**:
+
+| Symptom | Runbook | First Action |
+|---------|---------|--------------|
+| All invoices failing, 503 errors | [ARCA API Down](./runbooks/arca-api-down.md) | Enable circuit breaker |
+| "Too many connections" errors | [Database Issues](./runbooks/database-issues.md) | Restart API service |
+| API very slow, timeouts | [Database Issues](./runbooks/database-issues.md) | Check for slow queries |
+| Writes failing, lock timeouts | [Database Issues](./runbooks/database-issues.md) | Find blocking queries |
+
+**Using Runbooks:**
+1. Identify symptoms (alerts, user reports, logs)
+2. Find matching runbook from Quick Reference
+3. Follow steps in order (Symptoms → Diagnosis → Resolution → Verification)
+4. Don't skip verification steps
+5. Document actions taken for post-mortem
+6. Update runbook after incident if steps didn't work as expected
+
+**See**: [Runbooks README](./runbooks/README.md) for complete list, runbook template, and maintenance guidelines.
+
 ## Incident Response (TODO - Task #8)
 
 **File**: `incident-response.md`
@@ -274,5 +340,8 @@ Performance tuning guide:
 ---
 
 **Last Updated**: 2025-10-19
-**Status**: In Progress (Task #8 - Deployment & Monitoring Documentation)
-**Next**: Incident Response & Runbooks
+**Status**: In Progress (Task #8)
+- ✅ Deployment Guide (Stream A)
+- ✅ Monitoring Strategy (Stream B)
+- ✅ Core Runbooks (Stream C)
+**Next**: Additional runbooks as production incidents occur

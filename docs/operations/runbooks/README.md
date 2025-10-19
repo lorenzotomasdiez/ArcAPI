@@ -15,25 +15,43 @@ Runbooks are used by on-call engineers during incidents.
 
 ## Status
 
-> **Status**: TODO - Pending completion in Task #7
+> **Status**: Active - Core runbooks completed in Task #8
 >
-> Runbooks will be created in **Task #7: Create Operations Guides** (Week 6)
+> Additional runbooks will be added as needed based on production incidents.
+
+## Available Runbooks
+
+### Critical Issues (SEV1)
+
+1. **[ARCA API Down](./arca-api-down.md)** ✅
+   - **Severity**: SEV1 (Critical)
+   - **Symptoms**: All invoice creation requests failing, 503 errors, ARCA timeouts
+   - **Alert**: "ARCA API down (3 consecutive failures)"
+   - **Common Causes**: ARCA scheduled maintenance, network issues, ARCA infrastructure problems
+   - **Resolution**: Enable circuit breaker, queue invoices, monitor ARCA recovery, process queue when restored
+   - **Key Actions**:
+     - Enable circuit breaker: `railway run --env production pnpm config:set ARCA_CIRCUIT_BREAKER=true`
+     - Update status page
+     - Monitor ARCA status: Twitter @AFIPcomunica, ARCA status page
+     - Process queued invoices when ARCA recovers
+   - **Typical Duration**: 2-4 hours (scheduled maintenance), 15min-2h (unplanned outage)
+
+2. **[Database Issues](./database-issues.md)** ✅
+   - **Severity**: SEV1-SEV2 (varies)
+   - **Symptoms**: Timeouts, "too many connections" errors, slow queries, database locks
+   - **Alerts**: "Database connection pool exhausted", elevated P95 latency
+   - **Common Causes**: Connection leaks, traffic spike, slow queries, missing indexes, deadlocks
+   - **Resolution**: Restart service, increase pool size, add indexes, terminate blocking queries
+   - **Key Actions**:
+     - Check pool usage: SQL query for connection count
+     - Identify slow queries: `pg_stat_activity` analysis
+     - Add missing indexes: `CREATE INDEX CONCURRENTLY`
+     - Terminate blocking queries: `pg_terminate_backend(pid)`
+   - **Covers**: Connection pool exhaustion, slow queries, database locks
 
 ## Planned Runbooks
 
 ### Critical Issues (SEV1)
-
-1. **ARCA API Down** (TODO)
-   - File: `arca-api-down.md`
-   - Symptoms: All invoice creation requests failing
-   - Common causes: ARCA scheduled maintenance, network issues, auth token expired
-   - Resolution: Check ARCA status, rotate tokens, use fallback
-
-2. **Database Connection Pool Exhausted** (TODO)
-   - File: `database-connection-pool.md`
-   - Symptoms: Timeouts, "too many connections" errors
-   - Common causes: Connection leaks, traffic spike, slow queries
-   - Resolution: Increase pool size, identify leaks, kill slow queries
 
 3. **Complete Service Outage** (TODO)
    - File: `service-outage.md`
@@ -283,8 +301,41 @@ Each runbook has an owner responsible for:
 - [Monitoring](../monitoring.md) - Observability and alerting
 - [Architecture](../../architecture/) - System design
 
+## Quick Reference
+
+Use this quick reference to find the right runbook fast during incidents:
+
+| Symptom | Runbook | Severity | First Action |
+|---------|---------|----------|--------------|
+| All invoices failing, 503 errors | [ARCA API Down](./arca-api-down.md) | SEV1 | Enable circuit breaker |
+| "Too many connections" errors | [Database Issues](./database-issues.md) | SEV1 | Restart API service |
+| API very slow, timeouts | [Database Issues](./database-issues.md) | SEV2 | Check for slow queries |
+| Writes failing, lock timeouts | [Database Issues](./database-issues.md) | SEV2 | Find blocking queries |
+| ARCA slow but not down | [ARCA API Down](./arca-api-down.md) | SEV2 | Monitor, may need circuit breaker |
+
+## Contributing to Runbooks
+
+After every incident:
+
+1. **Review the runbook** used during the incident
+2. **Note what worked** and what didn't
+3. **Update the runbook** with:
+   - Commands that didn't work as expected
+   - Additional diagnosis steps needed
+   - New resolution approaches discovered
+   - Time estimates (if they were off)
+4. **Create new runbooks** for issues not covered
+5. **Submit PR** with runbook updates
+
+**Runbook Quality Standards:**
+- All commands must be copy-paste executable (no placeholders like `<YOUR_ID>`)
+- Include expected output for verification steps
+- Provide escalation criteria (when to page DBA vs CTO)
+- Add links to relevant monitoring dashboards
+- Update "Last Updated" date after changes
+
 ---
 
-**Last Updated**: 2025-10-15
-**Status**: Index Only (Runbooks Pending Task #7)
-**Next Task**: Task #7 - Create operational runbooks (Week 6)
+**Last Updated**: 2025-10-19
+**Status**: Active (2 core runbooks completed in Task #8)
+**Next**: Additional runbooks added based on production incidents
