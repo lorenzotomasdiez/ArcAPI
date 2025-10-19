@@ -1,0 +1,39 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "ARCA",
+    "AFIP",
+    "factura",
+    "comprobante",
+    "monotributo",
+    "CUIT",
+    "Mermaid",
+    "PostgreSQL",
+    "Redis",
+    "OpenAPI",
+    "BullMQ",
+    "TypeScript",
+    "Fastify",
+    "Supabase",
+    "Cloudflare",
+    "webhook",
+    "CAE",
+    "IVA",
+    "UUID",
+    "HMAC",
+    "JSONB",
+    "tsvector"
+  ],
+  "ignoreWords": [
+    "arcaapi",
+    "datetime",
+    "timestamp"
+  ],
+  "ignorePaths": [
+    "node_modules/**",
+    ".git/**",
+    "dist/**",
+    "build/**"
+  ]
+}
