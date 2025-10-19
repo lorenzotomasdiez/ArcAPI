@@ -654,8 +654,8 @@ Users can view in dashboard:
 - [User Flows](./user-flows.md) - User-facing flows (invoice creation, authentication)
 - [Architecture - Services](../architecture/02-services.md) - Service architecture details
 - [Architecture - Infrastructure](../architecture/04-infrastructure.md) - Infrastructure and deployment
-- [API Specification - Webhooks](../specifications/api/webhooks.md) - Webhook API contract
-- [Operations - Runbooks](../operations/runbooks/webhook-failures.md) - Troubleshooting webhook delivery issues
+- [API Specifications](../specifications/api/README.md) - API contracts
+- [Operations - Runbooks](../operations/runbooks/README.md) - Troubleshooting procedures
 
 ---
 

@@ -1098,7 +1098,7 @@ If deployment issues persist:
 
 4. **Create Incident**:
    - Document issue in incident tracking system
-   - Follow [Incident Response](./incident-response.md) procedures
+   - Follow [Runbooks](./runbooks/README.md) for incident response procedures
    - Schedule post-mortem if SEV1 or SEV2
 
 ---

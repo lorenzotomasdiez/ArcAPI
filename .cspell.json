@@ -23,12 +23,35 @@
     "UUID",
     "HMAC",
     "JSONB",
-    "tsvector"
+    "tsvector",
+    "pnpm",
+    "npx",
+    "markdownlint",
+    "Spectral",
+    "cspell",
+    "Grafana",
+    "Prometheus",
+    "Jaeger",
+    "PagerDuty",
+    "Statuspage",
+    "Sentry",
+    "CloudWatch",
+    "Logtail",
+    "Railway",
+    "Datadog",
+    "promql",
+    "observability",
+    "runbooks",
+    "DevOps",
+    "WSAA",
+    "SOAP"
   ],
   "ignoreWords": [
     "arcaapi",
     "datetime",
-    "timestamp"
+    "timestamp",
+    "Fastify",
+    "Winston"
   ],
   "ignorePaths": [
     "node_modules/**",

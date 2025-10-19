@@ -43,7 +43,7 @@ jobs:
       - name: Check for Broken Links
         if: always()
         run: |
-          find docs -name "*.md" -exec markdown-link-check {} \; --config .markdown-link-check.json
+          find docs -name "*.md" -exec markdown-link-check --config .markdown-link-check.json {} \;
 
       # Check 3: Validate Mermaid Diagrams
       - name: Validate Mermaid Diagrams

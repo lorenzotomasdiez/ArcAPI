@@ -489,8 +489,7 @@ This strategy ensures:
 
 - [System Flows](./system-flows.md) - Backend system flows (ARCA integration, webhooks)
 - [Architecture - Services](../architecture/02-services.md) - Service architecture details
-- [API Specification - Invoices](../specifications/api/invoices.md) - Invoice API contract
-- [API Specification - Certificates](../specifications/api/certificates.md) - Certificate API contract
+- [API Specifications](../specifications/api/README.md) - API contracts and documentation
 
 ---
 

@@ -816,7 +816,7 @@ These alerts indicate customer-impacting issues requiring immediate response.
 **Action**: Page on-call engineer
 **Severity**: CRITICAL
 
-**Runbook**: See [High Error Rate Runbook](./runbooks/high-error-rate.md)
+**Runbook**: See [Runbooks](./runbooks/README.md) for troubleshooting procedures
 
 #### 2. High P95 Latency
 
@@ -833,7 +833,7 @@ histogram_quantile(0.95,
 **Action**: Page on-call engineer
 **Severity**: CRITICAL
 
-**Runbook**: See [High Latency Runbook](./runbooks/high-latency.md)
+**Runbook**: See [Runbooks](./runbooks/README.md) for troubleshooting procedures
 
 #### 3. ARCA API Down
 
