@@ -1,11 +1,21 @@
 extends: spectral:oas
 
 rules:
-  operation-operationId: true
-  operation-tags: true
-  operation-description: true
-  info-contact: true
-  info-description: true
-  no-$ref-siblings: true
-  openapi-tags: true
-  path-params: true
+  # Require operationId for all operations
+  operation-operationId: error
+
+  # Require tags for organization
+  operation-tags: error
+
+  # Require descriptions
+  info-description: error
+  operation-description: warn
+
+  # Require examples for schemas
+  oas3-schema-examples: warn
+
+  # No unused components
+  oas3-unused-component: error
+
+  # Consistent naming
+  path-keys-no-trailing-slash: error
