@@ -397,6 +397,135 @@ npm run lint:fix
 npm run format:fix
 ```
 
+## How to Validate Documentation Locally
+
+Before submitting pull requests that modify documentation, you should run validation checks locally to catch issues early. This ensures that:
+
+- OpenAPI specs are valid and follow best practices
+- Links in markdown files are not broken
+- Spelling is correct (with technical terms whitelisted)
+- Markdown formatting is consistent
+
+### Prerequisites
+
+Install the validation tools:
+
+```bash
+# Using npm
+npm install -g @stoplight/spectral-cli markdown-link-check cspell markdownlint-cli2 npm-run-all
+
+# Or using pnpm (recommended)
+pnpm add -g @stoplight/spectral-cli markdown-link-check cspell markdownlint-cli2 npm-run-all
+
+# Or using yarn
+yarn global add @stoplight/spectral-cli markdown-link-check cspell markdownlint-cli2 npm-run-all
+```
+
+### Running Validation
+
+**Run all validations at once:**
+
+```bash
+# Using npm
+npm run validate:docs
+
+# Using pnpm
+pnpm validate:docs
+
+# Using yarn
+yarn validate:docs
+```
+
+**Run individual validations:**
+
+```bash
+# Validate OpenAPI specification
+npm run validate:openapi
+
+# Check for broken links
+npm run validate:links
+
+# Spell check documentation
+npm run validate:spelling
+
+# Lint markdown formatting
+npm run validate:markdown
+```
+
+### Troubleshooting Common Issues
+
+#### Adding Words to Spell Check
+
+If the spell checker flags a valid technical term:
+
+1. Open `.cspell.json` in the project root
+2. Add the word to the `"words"` array
+3. Save and re-run spell check
+
+Example:
+```json
+{
+  "words": [
+    "ARCA",
+    "AFIP",
+    "PostgreSQL",
+    "your-new-term"
+  ]
+}
+```
+
+#### Handling False Positive Link Checks
+
+If a valid link is incorrectly flagged as broken (e.g., localhost URLs, sites that block bots):
+
+1. Open `.markdown-link-check.json` in the project root
+2. Add a pattern to ignore or adjust the configuration
+3. Save and re-run link check
+
+Example:
+```json
+{
+  "ignorePatterns": [
+    {
+      "pattern": "^http://localhost"
+    },
+    {
+      "pattern": "^https://your-site.com"
+    }
+  ]
+}
+```
+
+#### Testing Mermaid Diagrams
+
+If you're adding or modifying Mermaid diagrams:
+
+1. Copy the Mermaid code from your markdown file
+2. Go to https://mermaid.live/
+3. Paste the code to verify it renders correctly
+4. Fix any syntax errors before committing
+
+#### Common Markdown Linting Issues
+
+- **Line length**: Keep lines under 120 characters (MD013)
+- **Heading structure**: Use proper heading hierarchy (MD001)
+- **List formatting**: Consistent bullet points and indentation (MD004)
+
+Check `.markdownlint.json` for the complete configuration.
+
+### CI/CD Integration
+
+The same validation checks run automatically in CI/CD when you open a pull request. By running them locally first, you can:
+
+- Catch issues before they reach CI (faster feedback)
+- Avoid failed CI checks that block merges
+- Ensure documentation quality standards are met
+
+The CI workflow is defined in `.github/workflows/docs-validation.yml` and runs on every PR that modifies:
+- `docs/**` - Documentation files
+- `src/**` - Source code (requires docs updates)
+- `.github/workflows/docs-validation.yml` - The validation workflow itself
+
 ## Related Documentation
 
 - [Architecture](../architecture/README.md) - System design
@@ -406,6 +535,6 @@ npm run format:fix
 
 ---
 
-**Last Updated**: 2025-10-15
-**Status**: Complete (Task #7 - All Streams Complete)
+**Last Updated**: 2025-10-19
+**Status**: Complete (Task #7 + Task #9 Stream C)
 **Next**: Future tasks (Git Workflow, Code Review Guidelines, Debugging Guide)
