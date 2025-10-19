@@ -1,5 +1,7 @@
 # ARCA API
 
+![Docs Validation](https://github.com/lorenzotomasdiez/ArcAPI/workflows/Documentation%20Validation/badge.svg)
+
 Modern REST API for electronic invoicing in Argentina (ARCA/AFIP).
 
 ## Overview
