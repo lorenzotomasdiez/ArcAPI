@@ -13,95 +13,83 @@ This section provides operational documentation for:
 
 ## Status
 
-> **Status**: TODO - Pending completion in Task #7
+> **Status**: In Progress - Task #8
 >
-> Operations documentation will be created in **Task #7: Create Operations Guides** (Week 5-6)
+> Operations documentation is being created in **Task #8: Create Operational Documentation**
 
-## Planned Documents
+## Deployment
 
-### 1. Deployment Guide (TODO - Task #7)
+**File**: [deployment-guide.md](./deployment-guide.md)
 
-**File**: `deployment-guide.md`
+Complete deployment procedures for ARCA API in staging and production environments.
 
-Complete infrastructure deployment procedures:
+**Prerequisites**: Railway CLI, Docker, Git, Node.js/pnpm, GitHub repository access, ARCA certificate
 
-**Infrastructure Provisioning:**
-- Terraform/CloudFormation setup
-- VPC and networking configuration
-- Compute resources (ECS/Kubernetes)
-- Database provisioning (RDS/managed PostgreSQL)
-- Redis cluster setup
-- Load balancer configuration
-- CDN setup (Cloudflare)
+**Key Sections:**
+- **Environment Setup**: Staging (Railway homologation) and production (Railway/AWS ECS) configuration
+- **Database Migrations**: CRITICAL - Always run migrations BEFORE deploying code
+- **Deployment Procedures**:
+  - Staging: Manual via `railway up` or automatic on main branch merge
+  - Production: GitHub Actions with manual approval gate or urgent Railway deployment
+- **Deployment Workflow**: Complete CI/CD pipeline diagram (tests → staging → approval → production)
+- **Health Checks**: `/health`, `/health/arca`, `/health/database`, `/health/redis` with expected responses
+- **Rollback Procedures**: Immediate rollback commands (`railway rollback` in 2-3 minutes)
+- **Deployment Checklist**: Pre/during/post-deployment verification to prevent mistakes
+- **Troubleshooting**: Common issues (health checks failing, migrations, ARCA auth, memory)
 
-**Environment Configuration:**
-- Development environment
-- Staging environment
-- Production environment (multi-AZ)
-- Environment variables
-- Secrets management
+**Quick Start:**
+```bash
+# Deploy to staging
+railway link  # Select arca-api-staging
+railway run pnpm db:migrate
+railway up --service arca-api
 
-**Deployment Procedures:**
-- Database migration process
-- Blue-green deployment
-- Canary releases
-- Rollback procedures
-- Health checks and smoke tests
+# Deploy to production
+git tag v1.2.0
+git push origin v1.2.0
+# Approve in GitHub Actions UI
+```
 
-**CI/CD Pipeline:**
-- GitHub Actions workflow
-- Build and test stages
-- Deployment gates
-- Approval requirements
-- Post-deployment validation
+**Target**: Enable staging deployment in <15 minutes following the guide
 
-### 2. Monitoring & Observability (TODO - Task #7)
+## Monitoring
 
-**File**: `monitoring.md`
+**File**: [monitoring.md](./monitoring.md)
 
-Comprehensive monitoring strategy:
+Production-grade monitoring and observability strategy for ARCA API, ensuring issues are detected before users complain.
 
-**Metrics to Collect:**
-- **RED Method** (Rate, Errors, Duration):
-  - Request rate (requests/minute)
-  - Error rate (% errors)
-  - Duration (P50, P95, P99 latency)
-- **USE Method** (Utilization, Saturation, Errors):
-  - CPU/memory utilization
-  - Queue depth
-  - Error counts
+**RED Metrics** (Rate, Errors, Duration):
+- Request rate: `http_requests_total`, `invoices_created_total`, `arca_api_calls_total`
+- Error rate: `http_requests_failed_total`, `arca_api_errors_total`, `database_errors_total`
+- Duration: `http_request_duration_seconds`, `arca_api_duration_seconds`, `database_query_duration_seconds`
+- Implementation: TypeScript + prom-client (Prometheus)
+- Scrape endpoint: `/metrics`
 
-**Per-Service Metrics:**
-- API: Request rate, latency, error rate
-- Database: Connection pool, query latency, slow queries
-- Redis: Hit rate, memory usage, evictions
-- ARCA Client: Call latency, error rate, token cache hit rate
+**Logging Standards**:
+- Format: Structured JSON with fields (timestamp, level, service, trace_id, user_id, message, context)
+- Levels: error (production issues), warn (retries/degraded), info (business events), debug (staging only)
+- Aggregation: Better Stack or Datadog
+- Retention: 30 days production, 7 days staging
 
-**Logging Strategy:**
-- Structured JSON logging
-- Log levels (DEBUG, INFO, WARN, ERROR)
-- Correlation IDs for request tracing
-- Centralized logging (ELK/CloudWatch)
-- Retention: 90 days operational, 1 year audit
+**Distributed Tracing**:
+- OpenTelemetry with automatic instrumentation
+- Trace ID propagation across all services
+- Custom spans: HTTP request, database query, ARCA API call, AI service call
+- Sampling: 100% errors, 10% successful requests
+- Trace visualization shows full invoice creation flow
 
-**Distributed Tracing:**
-- OpenTelemetry instrumentation
-- Trace all service-to-service calls
-- Visualize with Jaeger or CloudWatch X-Ray
+**Alerting**:
+- **CRITICAL** (PagerDuty): Error rate >5% (1min), P95 latency >5s (5min), ARCA API down (3 failures), Database pool exhausted
+- **WARNING** (Slack): Error rate >2% (5min), P95 latency >3s (10min), ARCA slow (>3s avg), Disk >80%
 
-**Dashboards:**
-- System overview dashboard
-- Service-specific dashboards
-- Database performance dashboard
-- Business metrics dashboard
+**SLO/SLI Targets**:
+- Availability: 99.95% uptime (21.6 min downtime/month allowed)
+- Latency: P95 <200ms (excluding ARCA API calls)
+- Error Rate: <0.1% (999 successes per 1000 requests)
 
-**Alerting:**
-- Alert definitions and thresholds
-- Escalation procedures
-- On-call rotation
-- PagerDuty/Opsgenie integration
+See [monitoring.md](./monitoring.md) for full details including code examples, alert definitions, and implementation checklist.
 
-### 3. Incident Response (TODO - Task #7)
+## Incident Response (TODO - Task #8)
 
 **File**: `incident-response.md`
 
@@ -142,7 +130,7 @@ Incident management procedures:
 - What actions will prevent recurrence?
 - Timeline of events
 
-### 4. Runbooks (TODO - Task #7)
+## Runbooks (TODO - Task #8)
 
 **Directory**: `runbooks/`
 
@@ -160,7 +148,7 @@ Planned runbooks:
 - Rate limit exceeded
 - Memory leak investigation
 
-### 5. Disaster Recovery (TODO - Task #7)
+## Disaster Recovery (TODO - Task #8)
 
 **File**: `disaster-recovery.md`
 
@@ -188,7 +176,7 @@ Business continuity and disaster recovery:
 - Cross-region failover test
 - Document test results
 
-### 6. Performance Optimization (TODO - Task #7)
+## Performance Optimization (TODO - Task #8)
 
 **File**: `performance-optimization.md`
 
@@ -285,6 +273,6 @@ Performance tuning guide:
 
 ---
 
-**Last Updated**: 2025-10-15
-**Status**: Placeholder (Ops Guides Pending Task #7)
-**Next Task**: Task #7 - Create operations guides (Week 5-6)
+**Last Updated**: 2025-10-19
+**Status**: In Progress (Task #8 - Deployment & Monitoring Documentation)
+**Next**: Incident Response & Runbooks
