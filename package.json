@@ -1,0 +1,25 @@
+{
+  "name": "arca-api",
+  "version": "0.1.0",
+  "description": "Modern REST API for electronic invoicing in Argentina (ARCA/AFIP)",
+  "scripts": {
+    "validate:docs": "npm-run-all validate:openapi validate:links validate:spelling validate:markdown",
+    "validate:openapi": "spectral lint docs/specifications/api/openapi.yaml",
+    "validate:links": "markdown-link-check docs/**/*.md",
+    "validate:spelling": "cspell 'docs/**/*.md'",
+    "validate:markdown": "markdownlint-cli2 'docs/**/*.md'"
+  },
+  "keywords": [
+    "arca",
+    "afip",
+    "argentina",
+    "invoicing",
+    "api"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lorenzotomasdiez/ArcAPI.git"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

@@ -1,0 +1,21 @@
+extends: spectral:oas
+
+rules:
+  # Require operationId for all operations
+  operation-operationId: error
+
+  # Require tags for organization
+  operation-tags: error
+
+  # Require descriptions
+  info-description: error
+  operation-description: warn
+
+  # Require examples for schemas
+  oas3-schema-examples: warn
+
+  # No unused components
+  oas3-unused-component: error
+
+  # Consistent naming
+  path-keys-no-trailing-slash: error

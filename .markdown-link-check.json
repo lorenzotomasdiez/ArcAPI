@@ -1,0 +1,23 @@
+{
+  "ignorePatterns": [
+    {
+      "pattern": "^http://localhost"
+    },
+    {
+      "pattern": "^https://example.com"
+    }
+  ],
+  "httpHeaders": [
+    {
+      "urls": ["https://github.com"],
+      "headers": {
+        "Accept-Encoding": "zlib, deflate, br"
+      }
+    }
+  ],
+  "timeout": "10s",
+  "retryOn429": true,
+  "retryCount": 3,
+  "fallbackRetryDelay": "5s",
+  "aliveStatusCodes": [200, 206, 403]
+}

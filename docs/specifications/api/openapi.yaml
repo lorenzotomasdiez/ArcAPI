@@ -1,0 +1,1610 @@
+openapi: 3.1.0
+
+info:
+  title: ARCA API
+  version: 1.0.0
+  description: |
+    Electronic invoicing API for Argentina (ARCA/AFIP).
+
+    ## Authentication
+    Use Bearer token authentication with your API key. Include the API key in the `Authorization` header:
+    ```
+    Authorization: Bearer YOUR_API_KEY
+    ```
+
+    API keys can be generated from the dashboard or via the API Keys endpoint.
+
+    ## Rate Limiting
+    Rate limits are enforced per API key based on your subscription tier:
+    - **Free tier**: 100 requests per minute
+    - **Pro tier**: 1000 requests per minute
+
+    When you exceed the rate limit, the API returns a `429 Too Many Requests` response.
+    Rate limit information is included in response headers:
+    - `X-RateLimit-Limit`: Maximum requests per minute
+    - `X-RateLimit-Remaining`: Remaining requests in current window
+    - `X-RateLimit-Reset`: Unix timestamp when the limit resets
+
+    ## Errors
+    All errors follow **RFC 7807 Problem Details** format with the following structure:
+    ```json
+    {
+      "type": "https://arcaapi.com/errors/validation",
+      "title": "Validation Error",
+      "status": 400,
+      "detail": "Invalid invoice data",
+      "instance": "/invoices",
+      "errors": [
+        {
+          "field": "cliente.documento_numero",
+          "message": "Invalid CUIT format"
+        }
+      ]
+    }
+    ```
+
+    ## Pagination
+    List endpoints support pagination with the following query parameters:
+    - `limit`: Number of items per page (default: 20, max: 100)
+    - `offset`: Number of items to skip (default: 0)
+
+    Paginated responses include a `pagination` object with `total`, `limit`, and `offset`.
+
+    ## Versioning
+    The API uses URL-based versioning. The current version is `v1` and is included in the base URL.
+    Breaking changes will result in a new version (e.g., `/v2/`).
+
+  contact:
+    name: ARCA API Support
+    email: support@arcaapi.com
+    url: https://arcaapi.com/support
+
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.arcaapi.com/v1
+    description: Production server
+  - url: https://sandbox.arcaapi.com/v1
+    description: Sandbox server (ARCA homologación environment for testing)
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Invoices
+    description: Electronic invoice management (creation, retrieval, updates)
+  - name: Certificates
+    description: ARCA certificate management (.pfx file upload and management)
+  - name: ReferenceData
+    description: Reference data for ARCA invoicing (invoice types, IVA rates, document types, etc.)
+  - name: ApiKeys
+    description: API key management (creation, listing, revocation)
+
+paths:
+  /invoices:
+    post:
+      summary: Create invoice
+      description: |
+        Create a new electronic invoice and submit it to ARCA for authorization.
+
+        This endpoint supports two modes:
+
+        ### Simple Mode (AI-powered)
+        Provide a natural language description of the invoice, and our AI will generate
+        the structured invoice data automatically. Ideal for quick invoice creation.
+
+        **Example**: "Factura para Juan Pérez por 3 horas de consultoría a $5000/hora"
+
+        The AI will:
+        - Infer invoice type based on customer and seller IVA conditions
+        - Calculate IVA automatically
+        - Extract customer information
+        - Structure items properly
+
+        ### Advanced Mode (Full control)
+        Provide complete structured invoice data with all fields explicitly defined.
+        Use this mode when you need precise control over all invoice fields.
+
+        ### Processing Flow
+        1. Request validated
+        2. Invoice structure generated (AI mode) or validated (advanced mode)
+        3. Invoice saved with `status: pending`
+        4. Submitted to ARCA for authorization
+        5. Response returned:
+           - **Success**: `201` with CAE and `status: approved`
+           - **ARCA error**: `400` with error details and `status: failed`
+           - **Timeout**: `202` with `status: pending_retry` (background retry)
+
+        ### Response Times
+        - P50: ~2 seconds
+        - P95: ~4 seconds
+        - P99: ~6 seconds
+
+      operationId: createInvoice
+      tags:
+        - Invoices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/SimpleInvoiceRequest'
+                - $ref: '#/components/schemas/AdvancedInvoiceRequest'
+              discriminator:
+                propertyName: mode
+                mapping:
+                  simple: '#/components/schemas/SimpleInvoiceRequest'
+                  advanced: '#/components/schemas/AdvancedInvoiceRequest'
+            examples:
+              simple:
+                summary: Simple mode - AI generates structure
+                value:
+                  mode: simple
+                  description: "Factura para Juan Pérez (CUIT 20-12345678-9) por 3 horas de consultoría técnica a $5000 por hora"
+              advanced:
+                summary: Advanced mode - Full control
+                value:
+                  mode: advanced
+                  tipo_comprobante: 1
+                  punto_venta: 1
+                  concepto: servicios
+                  fecha_emision: "2025-10-15"
+                  cliente:
+                    documento_tipo: 80
+                    documento_numero: "20123456789"
+                    razon_social: "Juan Pérez"
+                    email: "juan@example.com"
+                    condicion_iva: "responsable_inscripto"
+                  items:
+                    - descripcion: "Consultoría técnica"
+                      cantidad: 3
+                      precio_unitario: 5000
+                      iva_porcentaje: 21
+                    - descripcion: "Análisis de sistemas"
+                      cantidad: 5
+                      precio_unitario: 3000
+                      iva_porcentaje: 21
+      responses:
+        '201':
+          description: Invoice created and approved by ARCA
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                numero_completo: "0001-00000123"
+                punto_venta: 1
+                numero: 123
+                tipo_comprobante: "Factura A"
+                clase_comprobante: "A"
+                fecha_emision: "2025-10-15"
+                cae: "72345678901234"
+                vencimiento_cae: "2025-10-25"
+                status: "approved"
+                cliente:
+                  documento_tipo: 80
+                  documento_numero: "20123456789"
+                  razon_social: "Juan Pérez"
+                  email: "juan@example.com"
+                  condicion_iva: "responsable_inscripto"
+                items:
+                  - orden: 1
+                    descripcion: "Consultoría técnica"
+                    cantidad: 3
+                    precio_unitario: 5000
+                    iva_porcentaje: 21
+                    subtotal: 15000
+                    iva_importe: 3150
+                    total: 18150
+                subtotal: 15000
+                iva_total: 3150
+                tributos_total: 0
+                total: 18150
+                moneda: "ARS"
+                pdf_url: "https://cdn.arcaapi.com/invoices/550e8400.pdf"
+                qr_data: "https://www.afip.gob.ar/fe/qr/?p=..."
+                created_at: "2025-10-15T14:30:00Z"
+                updated_at: "2025-10-15T14:30:00Z"
+        '202':
+          description: Invoice accepted for processing (ARCA timeout - will retry in background)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                status: "pending_retry"
+                fecha_emision: "2025-10-15"
+                numero_completo: null
+                cae: null
+                cliente:
+                  documento_tipo: 80
+                  documento_numero: "20123456789"
+                  razon_social: "Juan Pérez"
+                  email: "juan@example.com"
+                  condicion_iva: "responsable_inscripto"
+                items:
+                  - orden: 1
+                    descripcion: "Consultoría técnica"
+                    cantidad: 3
+                    precio_unitario: 5000
+                    iva_porcentaje: 21
+                    subtotal: 15000
+                    iva_importe: 3150
+                    total: 18150
+                subtotal: 15000
+                iva_total: 3150
+                tributos_total: 0
+                total: 18150
+                moneda: "ARS"
+                created_at: "2025-10-15T14:30:00Z"
+                updated_at: "2025-10-15T14:30:00Z"
+                message: "ARCA did not respond in time. Invoice will be processed in the background. Check status via GET /invoices/{id}"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Payment Required - Credit balance exhausted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: "https://arcaapi.com/errors/payment-required"
+                title: "Payment Required"
+                status: 402
+                detail: "Invoice credit balance exhausted. Upgrade your plan or purchase additional credits."
+                instance: "/invoices"
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          description: Service Unavailable - ARCA API is down
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: "https://arcaapi.com/errors/service-unavailable"
+                title: "Service Unavailable"
+                status: 503
+                detail: "ARCA API is temporarily unavailable. Please retry in a few minutes."
+                instance: "/invoices"
+
+    get:
+      summary: List invoices
+      description: |
+        Retrieve a paginated list of invoices with optional filtering.
+
+        Results are ordered by creation date (newest first) by default.
+      operationId: listInvoices
+      tags:
+        - Invoices
+      parameters:
+        - name: limit
+          in: query
+          description: Number of invoices per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of invoices to skip
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: status
+          in: query
+          description: Filter by invoice status
+          required: false
+          schema:
+            type: string
+            enum: [pending, approved, failed, pending_retry]
+        - name: fecha_desde
+          in: query
+          description: Filter invoices from this date (inclusive)
+          required: false
+          schema:
+            type: string
+            format: date
+            example: "2025-10-01"
+        - name: fecha_hasta
+          in: query
+          description: Filter invoices until this date (inclusive)
+          required: false
+          schema:
+            type: string
+            format: date
+            example: "2025-10-31"
+        - name: cliente_nombre
+          in: query
+          description: Search by client name (partial match, case-insensitive)
+          required: false
+          schema:
+            type: string
+            example: "Juan"
+        - name: cliente_documento
+          in: query
+          description: Filter by client document number (exact match)
+          required: false
+          schema:
+            type: string
+            example: "20123456789"
+      responses:
+        '200':
+          description: List of invoices retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Invoice'
+                  pagination:
+                    type: object
+                    required:
+                      - total
+                      - limit
+                      - offset
+                    properties:
+                      total:
+                        type: integer
+                        description: Total number of invoices matching the filters
+                        example: 145
+                      limit:
+                        type: integer
+                        description: Number of items per page
+                        example: 20
+                      offset:
+                        type: integer
+                        description: Number of items skipped
+                        example: 0
+              example:
+                data:
+                  - id: "550e8400-e29b-41d4-a716-446655440000"
+                    numero_completo: "0001-00000123"
+                    status: "approved"
+                    fecha_emision: "2025-10-15"
+                    cliente:
+                      documento_tipo: 80
+                      documento_numero: "20123456789"
+                      razon_social: "Juan Pérez"
+                      condicion_iva: "responsable_inscripto"
+                    items:
+                      - orden: 1
+                        descripcion: "Consultoría técnica"
+                        cantidad: 3
+                        precio_unitario: 5000
+                        iva_porcentaje: 21
+                        subtotal: 15000
+                        iva_importe: 3150
+                        total: 18150
+                    subtotal: 15000
+                    iva_total: 3150
+                    tributos_total: 0
+                    total: 18150
+                    moneda: "ARS"
+                    cae: "72345678901234"
+                    created_at: "2025-10-15T14:30:00Z"
+                    updated_at: "2025-10-15T14:30:00Z"
+                  - id: "660e8400-e29b-41d4-a716-446655440001"
+                    numero_completo: "0001-00000122"
+                    status: "approved"
+                    fecha_emision: "2025-10-14"
+                    cliente:
+                      documento_tipo: 80
+                      documento_numero: "30111111112"
+                      razon_social: "Empresa SA"
+                      condicion_iva: "responsable_inscripto"
+                    items:
+                      - orden: 1
+                        descripcion: "Servicios profesionales"
+                        cantidad: 1
+                        precio_unitario: 50000
+                        iva_porcentaje: 21
+                        subtotal: 50000
+                        iva_importe: 10500
+                        total: 60500
+                    subtotal: 50000
+                    iva_total: 10500
+                    tributos_total: 0
+                    total: 60500
+                    moneda: "ARS"
+                    cae: "72345678901233"
+                    created_at: "2025-10-14T10:15:00Z"
+                    updated_at: "2025-10-14T10:15:00Z"
+                pagination:
+                  total: 145
+                  limit: 20
+                  offset: 0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /invoices/{id}:
+    get:
+      summary: Get invoice by ID
+      description: Retrieve a specific invoice by its unique identifier.
+      operationId: getInvoice
+      tags:
+        - Invoices
+      parameters:
+        - name: id
+          in: path
+          description: Invoice unique identifier (UUID)
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Invoice retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                numero_completo: "0001-00000123"
+                punto_venta: 1
+                numero: 123
+                tipo_comprobante: "Factura A"
+                clase_comprobante: "A"
+                fecha_emision: "2025-10-15"
+                cae: "72345678901234"
+                vencimiento_cae: "2025-10-25"
+                status: "approved"
+                cliente:
+                  documento_tipo: 80
+                  documento_numero: "20123456789"
+                  razon_social: "Juan Pérez"
+                  email: "juan@example.com"
+                  condicion_iva: "responsable_inscripto"
+                items:
+                  - orden: 1
+                    descripcion: "Consultoría técnica"
+                    cantidad: 3
+                    precio_unitario: 5000
+                    iva_porcentaje: 21
+                    subtotal: 15000
+                    iva_importe: 3150
+                    total: 18150
+                subtotal: 15000
+                iva_total: 3150
+                tributos_total: 0
+                total: 18150
+                moneda: "ARS"
+                concepto: "servicios"
+                pdf_url: "https://cdn.arcaapi.com/invoices/550e8400.pdf"
+                xml_url: "https://cdn.arcaapi.com/invoices/550e8400.xml"
+                qr_data: "https://www.afip.gob.ar/fe/qr/?p=..."
+                created_at: "2025-10-15T14:30:00Z"
+                updated_at: "2025-10-15T14:30:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Invoice not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: "https://arcaapi.com/errors/not-found"
+                title: "Not Found"
+                status: 404
+                detail: "Invoice with ID 550e8400-e29b-41d4-a716-446655440000 not found"
+                instance: "/invoices/550e8400-e29b-41d4-a716-446655440000"
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    patch:
+      summary: Update invoice
+      description: |
+        Update an existing invoice before it has been submitted to ARCA.
+
+        **Important**: Only invoices with `status: pending` or `status: failed` can be updated.
+        Approved invoices cannot be modified (they must be cancelled and recreated instead).
+
+        You can update:
+        - Client information
+        - Invoice items
+        - Invoice metadata (observaciones, etc.)
+        - Sales point and invoice type
+
+        After updating, the invoice will be resubmitted to ARCA automatically.
+      operationId: updateInvoice
+      tags:
+        - Invoices
+      parameters:
+        - name: id
+          in: path
+          description: Invoice unique identifier (UUID)
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceUpdateRequest'
+            example:
+              cliente:
+                documento_tipo: 80
+                documento_numero: "20123456789"
+                razon_social: "Juan Pérez"
+                condicion_iva: "responsable_inscripto"
+                email: "nuevo_email@example.com"
+              items:
+                - descripcion: "Consultoría técnica actualizada"
+                  cantidad: 5
+                  precio_unitario: 5000
+                  iva_porcentaje: 21
+              observaciones: "Factura corregida según feedback del cliente"
+      responses:
+        '200':
+          description: Invoice updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                status: "approved"
+                fecha_emision: "2025-10-15"
+                numero_completo: "0001-00000123"
+                cae: "72345678901235"
+                vencimiento_cae: "2025-10-25"
+                cliente:
+                  documento_tipo: 80
+                  documento_numero: "20123456789"
+                  razon_social: "Juan Pérez"
+                  email: "nuevo_email@example.com"
+                  condicion_iva: "responsable_inscripto"
+                items:
+                  - orden: 1
+                    descripcion: "Consultoría técnica actualizada"
+                    cantidad: 5
+                    precio_unitario: 5000
+                    iva_porcentaje: 21
+                    subtotal: 25000
+                    iva_importe: 5250
+                    total: 30250
+                subtotal: 25000
+                iva_total: 5250
+                tributos_total: 0
+                total: 30250
+                moneda: "ARS"
+                created_at: "2025-10-15T14:30:00Z"
+                updated_at: "2025-10-15T15:00:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Invoice not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: "https://arcaapi.com/errors/not-found"
+                title: "Not Found"
+                status: 404
+                detail: "Invoice with ID 550e8400-e29b-41d4-a716-446655440000 not found"
+                instance: "/invoices/550e8400-e29b-41d4-a716-446655440000"
+        '409':
+          description: Conflict - Invoice cannot be updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: "https://arcaapi.com/errors/conflict"
+                title: "Conflict"
+                status: 409
+                detail: "Invoice with status 'approved' cannot be updated. Cancel and recreate instead."
+                instance: "/invoices/550e8400-e29b-41d4-a716-446655440000"
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api-keys:
+    post:
+      summary: Create API key
+      description: |
+        Create a new API key for authentication.
+
+        **Important**: The full API key is only shown once in the response.
+        Store it securely - you won't be able to retrieve it again.
+
+        After creation, only the key prefix (first 8 characters) will be visible
+        when listing API keys.
+
+        ### API Key Format
+        - Production: `arc_live_` + random string
+        - Sandbox: `arc_test_` + random string
+        - Example: `arc_live_12345678abcdefghijklmnop`
+
+        ### Rate Limiting
+        Rate limits are determined by the tier:
+        - **Free tier**: 100 requests per minute
+        - **Pro tier**: 1000 requests per minute
+
+        ### Security Best Practices
+        - Store API keys securely (environment variables, secret managers)
+        - Never commit API keys to version control
+        - Rotate keys periodically
+        - Delete unused keys immediately
+        - Use different keys for different environments
+      operationId: createApiKey
+      tags:
+        - ApiKeys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyCreateRequest'
+            example:
+              name: "Production API Key"
+              tier: "pro"
+      responses:
+        '201':
+          description: API key created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiKey'
+                  - type: object
+                    required:
+                      - key
+                      - warning
+                    properties:
+                      key:
+                        type: string
+                        description: |
+                          Full API key - ONLY shown at creation time.
+                          Store this securely. You won't see it again.
+                        example: "arc_live_12345678abcdefghijklmnop"
+                      warning:
+                        type: string
+                        description: Warning message about key visibility
+                        example: "This is the only time you'll see the full API key. Store it securely."
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                name: "Production API Key"
+                prefix: "arc_live_12345678"
+                tier: "pro"
+                key: "arc_live_12345678abcdefghijklmnop"
+                warning: "This is the only time you'll see the full API key. Store it securely."
+                last_used_at: null
+                created_at: "2025-10-15T14:30:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    get:
+      summary: List API keys
+      description: |
+        Retrieve a paginated list of API keys.
+
+        **Security**: Only the key prefix (first 8 characters) is shown for security.
+        The full key is never retrievable after creation.
+
+        This endpoint helps you:
+        - Audit active API keys
+        - Identify unused keys (check `last_used_at`)
+        - Manage key lifecycle (create, track, revoke)
+
+        Results are ordered by creation date (newest first).
+      operationId: listApiKeys
+      tags:
+        - ApiKeys
+      parameters:
+        - name: limit
+          in: query
+          description: Number of API keys per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of API keys to skip
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of API keys retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                  - pagination
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApiKey'
+                  pagination:
+                    type: object
+                    required:
+                      - total
+                      - limit
+                      - offset
+                    properties:
+                      total:
+                        type: integer
+                        description: Total number of API keys
+                        example: 5
+                      limit:
+                        type: integer
+                        description: Number of items per page
+                        example: 20
+                      offset:
+                        type: integer
+                        description: Number of items skipped
+                        example: 0
+              example:
+                data:
+                  - id: "550e8400-e29b-41d4-a716-446655440000"
+                    name: "Production API Key"
+                    prefix: "arc_live_12345678"
+                    tier: "pro"
+                    last_used_at: "2025-10-15T14:30:00Z"
+                    created_at: "2025-10-14T10:00:00Z"
+                  - id: "660e8400-e29b-41d4-a716-446655440001"
+                    name: "Sandbox Testing Key"
+                    prefix: "arc_test_87654321"
+                    tier: "free"
+                    last_used_at: null
+                    created_at: "2025-10-13T09:00:00Z"
+                pagination:
+                  total: 5
+                  limit: 20
+                  offset: 0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api-keys/{id}:
+    delete:
+      summary: Revoke API key
+      description: |
+        Revoke an API key immediately.
+
+        Once revoked:
+        - The key becomes invalid immediately
+        - Any requests using this key will return `401 Unauthorized`
+        - The key cannot be recovered or reactivated
+        - You'll need to create a new key if needed
+
+        **Best Practice**: Revoke keys immediately when:
+        - The key is compromised or exposed
+        - The key is no longer needed
+        - Team member leaves who had access
+        - Rotating keys for security
+      operationId: revokeApiKey
+      tags:
+        - ApiKeys
+      parameters:
+        - name: id
+          in: path
+          description: API key unique identifier (UUID)
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '204':
+          description: API key revoked successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: API key not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: "https://arcaapi.com/errors/not-found"
+                title: "Not Found"
+                status: 404
+                detail: "API key with ID 550e8400-e29b-41d4-a716-446655440000 not found"
+                instance: "/api-keys/550e8400-e29b-41d4-a716-446655440000"
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
+      description: |
+        API key authentication. Provide your API key in the Authorization header:
+        ```
+        Authorization: Bearer YOUR_API_KEY
+        ```
+
+        API keys can be created in the dashboard or via the API Keys endpoint.
+
+  schemas:
+    SimpleInvoiceRequest:
+      type: object
+      description: |
+        Simple mode request - AI generates invoice structure from natural language description.
+
+        Ideal for quick invoice creation without worrying about ARCA's complex field requirements.
+      required:
+        - mode
+        - description
+      properties:
+        mode:
+          type: string
+          enum: [simple]
+          description: Must be "simple" for AI-powered mode
+        description:
+          type: string
+          minLength: 10
+          maxLength: 1000
+          description: |
+            Natural language description of the invoice in Spanish.
+
+            Include as much detail as possible:
+            - Customer name and CUIT/DNI
+            - Items/services sold
+            - Quantities and prices
+            - Any special conditions
+
+            The AI will infer invoice type, calculate IVA, and structure items automatically.
+          example: "Factura para Juan Pérez (CUIT 20-12345678-9) por 3 horas de consultoría técnica a $5000 por hora"
+
+    AdvancedInvoiceRequest:
+      type: object
+      description: |
+        Advanced mode request - Full control over invoice structure.
+
+        Use this when you need precise control over all fields or when integrating
+        with your existing invoicing system.
+      required:
+        - mode
+        - tipo_comprobante
+        - punto_venta
+        - concepto
+        - cliente
+        - items
+      properties:
+        mode:
+          type: string
+          enum: [advanced]
+          description: Must be "advanced" for structured mode
+        tipo_comprobante:
+          type: integer
+          description: |
+            ARCA invoice type code:
+            - 1: Factura A
+            - 6: Factura B
+            - 11: Factura C
+
+            See GET /reference-data/invoice-types for complete list.
+          enum: [1, 6, 11]
+          example: 1
+        punto_venta:
+          type: integer
+          minimum: 1
+          maximum: 9999
+          description: Sales point number registered with ARCA
+          example: 1
+        concepto:
+          type: string
+          description: |
+            Invoice concept:
+            - productos: Products only
+            - servicios: Services only
+            - mixto: Mixed (products and services)
+          enum: [productos, servicios, mixto]
+          example: "servicios"
+        fecha_emision:
+          type: string
+          format: date
+          description: Invoice emission date (defaults to today if not provided)
+          example: "2025-10-15"
+        cliente:
+          $ref: '#/components/schemas/Cliente'
+        items:
+          type: array
+          description: Invoice line items
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/InvoiceItem'
+        tributos:
+          type: array
+          description: Additional taxes (optional)
+          items:
+            $ref: '#/components/schemas/Tributo'
+        observaciones:
+          type: string
+          maxLength: 1000
+          description: Additional notes or observations
+          example: "Pago en 30 días"
+
+    InvoiceUpdateRequest:
+      type: object
+      description: |
+        Invoice update request - Only for pending or failed invoices.
+
+        All fields are optional. Only provide fields you want to update.
+      properties:
+        tipo_comprobante:
+          type: integer
+          description: ARCA invoice type code
+          enum: [1, 6, 11]
+        punto_venta:
+          type: integer
+          minimum: 1
+          maximum: 9999
+          description: Sales point number
+        concepto:
+          type: string
+          enum: [productos, servicios, mixto]
+        fecha_emision:
+          type: string
+          format: date
+        cliente:
+          $ref: '#/components/schemas/Cliente'
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/InvoiceItem'
+        tributos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tributo'
+        observaciones:
+          type: string
+          maxLength: 1000
+
+    Cliente:
+      type: object
+      description: Customer/client information
+      required:
+        - documento_tipo
+        - documento_numero
+        - razon_social
+        - condicion_iva
+      properties:
+        documento_tipo:
+          type: integer
+          description: |
+            Document type code:
+            - 80: CUIT
+            - 96: DNI
+            - 86: CUIL
+            - 87: CDI
+
+            See GET /reference-data/document-types for complete list.
+          example: 80
+        documento_numero:
+          type: string
+          description: Document number (CUIT, DNI, etc.) without dashes
+          pattern: '^\d{11}$|^\d{8}$'
+          example: "20123456789"
+        razon_social:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Legal name or full name
+          example: "Juan Pérez"
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: Customer email (optional)
+          example: "juan@example.com"
+        condicion_iva:
+          type: string
+          description: |
+            IVA condition:
+            - responsable_inscripto: Registered taxpayer
+            - monotributo: Monotributo regime
+            - exento: Tax exempt
+            - consumidor_final: Final consumer
+          enum: [responsable_inscripto, monotributo, exento, consumidor_final]
+          example: "responsable_inscripto"
+        domicilio:
+          type: string
+          maxLength: 255
+          description: Street address (optional)
+          example: "Av. Corrientes 1234"
+
+    InvoiceItem:
+      type: object
+      description: Invoice line item (product or service)
+      required:
+        - descripcion
+        - cantidad
+        - precio_unitario
+        - iva_porcentaje
+      properties:
+        codigo:
+          type: string
+          maxLength: 50
+          description: Product/service code (optional)
+          example: "CONS-001"
+        descripcion:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Item description
+          example: "Consultoría técnica"
+        cantidad:
+          type: number
+          format: decimal
+          minimum: 0.001
+          maximum: 999999.999
+          description: Quantity
+          example: 3
+        unidad:
+          type: string
+          maxLength: 20
+          description: Unit of measurement (optional, defaults to "unidades")
+          example: "horas"
+        precio_unitario:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Unit price (without IVA)
+          example: 5000
+        bonificacion:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Discount amount (optional)
+          example: 0
+        iva_porcentaje:
+          type: number
+          format: decimal
+          description: |
+            IVA percentage:
+            - 0: No IVA
+            - 10.5: Reduced rate
+            - 21: Standard rate
+            - 27: Higher rate
+          enum: [0, 10.5, 21, 27]
+          example: 21
+
+    Tributo:
+      type: object
+      description: Additional tax (percepciones, retenciones, etc.)
+      required:
+        - tributo_id
+        - descripcion
+        - base_imponible
+        - alicuota
+      properties:
+        tributo_id:
+          type: integer
+          description: ARCA tax code
+          example: 1
+        descripcion:
+          type: string
+          maxLength: 255
+          description: Tax description
+          example: "Percepción IIBB CABA"
+        base_imponible:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Tax base amount
+          example: 15000
+        alicuota:
+          type: number
+          format: decimal
+          minimum: 0
+          maximum: 100
+          description: Tax rate percentage
+          example: 3.5
+
+    Invoice:
+      type: object
+      description: Complete invoice with all details
+      required:
+        - id
+        - status
+        - fecha_emision
+        - cliente
+        - items
+        - subtotal
+        - iva_total
+        - tributos_total
+        - total
+        - moneda
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique invoice identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        numero_completo:
+          type: string
+          nullable: true
+          description: "Complete invoice number (format: PPPP-NNNNNNNN)"
+          example: "0001-00000123"
+        punto_venta:
+          type: integer
+          nullable: true
+          description: Sales point number
+          example: 1
+        numero:
+          type: integer
+          nullable: true
+          description: Invoice number (sequential per sales point)
+          example: 123
+        tipo_comprobante:
+          type: string
+          nullable: true
+          description: Invoice type (human-readable)
+          example: "Factura A"
+        clase_comprobante:
+          type: string
+          nullable: true
+          description: Invoice class code (A, B, C, M)
+          example: "A"
+        fecha_emision:
+          type: string
+          format: date
+          description: Emission date
+          example: "2025-10-15"
+        fecha_vencimiento_pago:
+          type: string
+          format: date
+          nullable: true
+          description: Payment due date (optional)
+          example: "2025-11-15"
+        cae:
+          type: string
+          nullable: true
+          description: Electronic Authorization Code from ARCA
+          example: "72345678901234"
+        vencimiento_cae:
+          type: string
+          format: date
+          nullable: true
+          description: CAE expiration date
+          example: "2025-10-25"
+        status:
+          type: string
+          description: |
+            Invoice status:
+            - pending: Initial state, not yet submitted
+            - approved: Approved by ARCA with CAE
+            - failed: Rejected by ARCA
+            - pending_retry: Waiting for background retry after timeout
+          enum: [pending, approved, failed, pending_retry]
+          example: "approved"
+        cliente:
+          $ref: '#/components/schemas/Cliente'
+        items:
+          type: array
+          description: Invoice line items
+          items:
+            allOf:
+              - $ref: '#/components/schemas/InvoiceItem'
+              - type: object
+                required:
+                  - orden
+                  - subtotal
+                  - iva_importe
+                  - total
+                properties:
+                  orden:
+                    type: integer
+                    description: Item order/position in invoice
+                    example: 1
+                  iva_id:
+                    type: integer
+                    nullable: true
+                    description: ARCA IVA code
+                    example: 5
+                  subtotal:
+                    type: number
+                    format: decimal
+                    description: Item subtotal (quantity × unit price - discount)
+                    example: 15000
+                  iva_importe:
+                    type: number
+                    format: decimal
+                    description: IVA amount
+                    example: 3150
+                  total:
+                    type: number
+                    format: decimal
+                    description: Item total (subtotal + IVA)
+                    example: 18150
+        tributos:
+          type: array
+          description: Additional taxes
+          items:
+            allOf:
+              - $ref: '#/components/schemas/Tributo'
+              - type: object
+                required:
+                  - importe
+                properties:
+                  importe:
+                    type: number
+                    format: decimal
+                    description: Tax amount
+                    example: 525
+        subtotal:
+          type: number
+          format: decimal
+          description: Invoice subtotal (sum of items before IVA)
+          example: 15000
+        iva_total:
+          type: number
+          format: decimal
+          description: Total IVA amount
+          example: 3150
+        tributos_total:
+          type: number
+          format: decimal
+          description: Total additional taxes amount
+          example: 0
+        total:
+          type: number
+          format: decimal
+          description: Invoice total (subtotal + IVA + tributos)
+          example: 18150
+        moneda:
+          type: string
+          description: Currency code (ISO 4217)
+          example: "ARS"
+        cotizacion:
+          type: number
+          format: decimal
+          description: Exchange rate (for foreign currencies)
+          example: 1
+        concepto:
+          type: string
+          nullable: true
+          enum: [productos, servicios, mixto]
+          example: "servicios"
+        observaciones:
+          type: string
+          nullable: true
+          maxLength: 1000
+          description: Additional notes
+          example: "Pago en 30 días"
+        pdf_url:
+          type: string
+          format: uri
+          nullable: true
+          description: URL to download PDF version
+          example: "https://cdn.arcaapi.com/invoices/550e8400.pdf"
+        xml_url:
+          type: string
+          format: uri
+          nullable: true
+          description: URL to download XML version
+          example: "https://cdn.arcaapi.com/invoices/550e8400.xml"
+        qr_data:
+          type: string
+          nullable: true
+          description: QR code data for ARCA verification
+          example: "https://www.afip.gob.ar/fe/qr/?p=..."
+        metadata:
+          type: object
+          nullable: true
+          description: Custom metadata (flexible JSON object)
+          additionalProperties: true
+          example:
+            integration: "my-erp"
+            order_id: "ORD-12345"
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2025-10-15T14:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2025-10-15T14:30:00Z"
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Soft deletion timestamp (null if not deleted)
+          example: null
+
+    ApiKeyCreateRequest:
+      type: object
+      description: Request to create a new API key
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: |
+            Friendly name for the API key to help identify its purpose.
+
+            Examples: "Production Server", "Development Environment", "CI/CD Pipeline"
+          example: "Production API Key"
+        tier:
+          type: string
+          description: |
+            Subscription tier for rate limiting:
+            - **free**: 100 requests per minute (default)
+            - **pro**: 1000 requests per minute
+          enum: [free, pro]
+          default: free
+          example: "pro"
+
+    ApiKey:
+      type: object
+      description: |
+        API key information.
+
+        **Security Note**: The full API key is only shown once at creation time.
+        After creation, only the prefix (first 8 characters after the environment prefix)
+        is visible.
+
+        ### API Key Format
+        Keys are prefixed based on environment:
+        - Production: `arc_live_XXXXXXXX...` (e.g., `arc_live_12345678abcdefgh`)
+        - Sandbox: `arc_test_XXXXXXXX...` (e.g., `arc_test_87654321zyxwvuts`)
+
+        ### Key Storage
+        The full key is hashed using bcrypt before storage. Only the prefix is stored
+        in plaintext for display purposes.
+
+        ### Rate Limiting
+        Rate limits are enforced per API key based on tier:
+        - **Free tier**: 100 requests per minute
+        - **Pro tier**: 1000 requests per minute
+      required:
+        - id
+        - name
+        - prefix
+        - tier
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the API key
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          description: Friendly name for the key
+          example: "Production API Key"
+        prefix:
+          type: string
+          description: |
+            Visible prefix of the API key (first 8 characters after environment prefix).
+            Used to identify the key without exposing the full secret.
+
+            Format: `arc_{env}_{prefix}...`
+          example: "arc_live_12345678"
+        tier:
+          type: string
+          description: |
+            Subscription tier determining rate limits:
+            - **free**: 100 requests per minute
+            - **pro**: 1000 requests per minute
+          enum: [free, pro]
+          example: "pro"
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            Timestamp of the last time this API key was used for authentication.
+            Helps identify inactive keys that can be safely revoked.
+
+            `null` if the key has never been used.
+          example: "2025-10-15T14:30:00Z"
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the API key was created
+          example: "2025-10-15T14:30:00Z"
+
+    ProblemDetails:
+      type: object
+      description: |
+        RFC 7807 Problem Details for HTTP APIs.
+
+        Standard error format used by all error responses.
+        See: https://datatracker.ietf.org/doc/html/rfc7807
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+          description: |
+            URI reference identifying the problem type.
+            Dereferenceable to human-readable documentation.
+          example: "https://arcaapi.com/errors/validation"
+        title:
+          type: string
+          description: Short, human-readable summary of the problem type
+          example: "Validation Error"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        detail:
+          type: string
+          description: Human-readable explanation specific to this occurrence
+          example: "Invalid CUIT format in cliente.documento_numero"
+        instance:
+          type: string
+          description: URI reference for this specific occurrence of the problem
+          example: "/invoices"
+        errors:
+          type: array
+          description: Detailed validation errors (for 400 responses)
+          items:
+            type: object
+            required:
+              - field
+              - message
+            properties:
+              field:
+                type: string
+                description: JSON path to the field with error
+                example: "cliente.documento_numero"
+              message:
+                type: string
+                description: Error message for this field
+                example: "CUIT must have 11 digits"
+
+  responses:
+    BadRequest:
+      description: Bad Request - Validation error or invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            validation:
+              summary: Validation error
+              value:
+                type: "https://arcaapi.com/errors/validation"
+                title: "Validation Error"
+                status: 400
+                detail: "One or more fields failed validation"
+                instance: "/invoices"
+                errors:
+                  - field: "cliente.documento_numero"
+                    message: "Invalid CUIT format. Must be 11 digits."
+                  - field: "items[0].iva_porcentaje"
+                    message: "IVA percentage must be 0, 10.5, 21, or 27"
+            arca_error:
+              summary: ARCA rejection
+              value:
+                type: "https://arcaapi.com/errors/arca-rejection"
+                title: "ARCA Rejection"
+                status: 400
+                detail: "ARCA rejected the invoice: CUIT no encontrado en el padrón"
+                instance: "/invoices"
+
+    Unauthorized:
+      description: Unauthorized - Missing or invalid API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://arcaapi.com/errors/unauthorized"
+            title: "Unauthorized"
+            status: 401
+            detail: "Invalid or missing API key. Provide a valid API key in the Authorization header."
+            instance: "/invoices"
+
+    RateLimited:
+      description: Too Many Requests - Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          description: Maximum requests per minute
+          schema:
+            type: integer
+            example: 100
+        X-RateLimit-Remaining:
+          description: Remaining requests in current window
+          schema:
+            type: integer
+            example: 0
+        X-RateLimit-Reset:
+          description: Unix timestamp when limit resets
+          schema:
+            type: integer
+            example: 1697472000
+        Retry-After:
+          description: Seconds to wait before retrying
+          schema:
+            type: integer
+            example: 60
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://arcaapi.com/errors/rate-limited"
+            title: "Rate Limited"
+            status: 429
+            detail: "Rate limit exceeded. Free tier allows 100 requests per minute. Upgrade to Pro for 1000 req/min."
+            instance: "/invoices"
+
+    InternalError:
+      description: Internal Server Error - Unexpected error occurred
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://arcaapi.com/errors/internal"
+            title: "Internal Server Error"
+            status: 500
+            detail: "An unexpected error occurred. Our team has been notified. Please try again later."
+            instance: "/invoices"
