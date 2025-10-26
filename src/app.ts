@@ -7,6 +7,12 @@ import { env } from './config/env';
 import { logger } from './config/logger';
 import { getPrismaClient } from './config/database';
 
+// Import routes
+import referenceRoutes from './routes/reference.routes';
+import clientRoutes from './routes/client.routes';
+import pointOfSaleRoutes from './routes/point-of-sale.routes';
+import certificateRoutes from './routes/certificate.routes';
+
 const app: Application = express();
 
 // Middleware
@@ -48,6 +54,10 @@ app.get('/', (req: Request, res: Response) => {
     endpoints: {
       health: '/health',
       healthDatabase: '/health/database',
+      reference: '/api/v1/reference',
+      clients: '/api/v1/clients',
+      pointsOfSale: '/api/v1/points-of-sale',
+      certificates: '/api/v1/certificates',
     },
   });
 });
@@ -93,6 +103,18 @@ app.get('/health/database', async (req: Request, res: Response) => {
     });
   }
 });
+
+// ============================================================================
+// API ROUTES
+// ============================================================================
+
+/**
+ * Mount API routes under /api/v1
+ */
+app.use('/api/v1/reference', referenceRoutes);
+app.use('/api/v1/clients', clientRoutes);
+app.use('/api/v1/points-of-sale', pointOfSaleRoutes);
+app.use('/api/v1/certificates', certificateRoutes);
 
 // ============================================================================
 // ERROR HANDLERS
