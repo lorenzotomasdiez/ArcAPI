@@ -12,6 +12,7 @@ import referenceRoutes from './routes/reference.routes';
 import clientRoutes from './routes/client.routes';
 import pointOfSaleRoutes from './routes/point-of-sale.routes';
 import certificateRoutes from './routes/certificate.routes';
+import invoiceRoutes from './routes/invoice.routes';
 
 const app: Application = express();
 
@@ -58,6 +59,7 @@ app.get('/', (req: Request, res: Response) => {
       clients: '/api/v1/clients',
       pointsOfSale: '/api/v1/points-of-sale',
       certificates: '/api/v1/certificates',
+      invoices: '/api/v1/invoices',
     },
   });
 });
@@ -115,6 +117,7 @@ app.use('/api/v1/reference', referenceRoutes);
 app.use('/api/v1/clients', clientRoutes);
 app.use('/api/v1/points-of-sale', pointOfSaleRoutes);
 app.use('/api/v1/certificates', certificateRoutes);
+app.use('/api/v1/invoices', invoiceRoutes);
 
 // ============================================================================
 // ERROR HANDLERS
