@@ -1,0 +1,435 @@
+// Prisma schema for ARCA API
+// Documentation: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USERS & AUTHENTICATION
+// ============================================================================
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String?  // Null for OAuth users
+  name          String
+  company       String?
+  taxId         String?  // CUIT/CUIL for Argentina
+  phone         String?
+
+  // Account settings
+  tier          UserTier @default(FREE)
+  status        UserStatus @default(ACTIVE)
+
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastLoginAt   DateTime?
+  emailVerifiedAt DateTime?
+
+  // Relations
+  apiKeys       ApiKey[]
+  invoices      Invoice[]
+  clients       Client[]
+  pointsOfSale  PointOfSale[]
+  certificates  Certificate[]
+  webhookSubscriptions WebhookSubscription[]
+  integrations  Integration[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+enum UserTier {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+// ============================================================================
+// API KEYS
+// ============================================================================
+
+model ApiKey {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String   // e.g., "Production API Key"
+  keyHash     String   @unique  // bcrypt hash of the API key
+  keyPrefix   String   // e.g., "sk_live_" or "sk_test_"
+
+  // Permissions & limits
+  scopes      String[] // e.g., ["invoices:read", "invoices:write"]
+  rateLimit   Int      @default(100) // requests per minute
+
+  // Status
+  isActive    Boolean  @default(true)
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+// ============================================================================
+// INVOICES
+// ============================================================================
+
+model Invoice {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Invoice metadata
+  invoiceNumber     String?  // ARCA-assigned number
+  invoiceType       Int      // AFIP invoice type code (1-15)
+  pointOfSaleId     String
+  pointOfSale       PointOfSale @relation(fields: [pointOfSaleId], references: [id])
+
+  // Client information
+  clientId          String
+  client            Client   @relation(fields: [clientId], references: [id])
+
+  // Invoice details
+  issueDate         DateTime
+  dueDate           DateTime?
+  currency          String   @default("ARS")
+  exchangeRate      Float?   @default(1)
+
+  // Amounts
+  subtotal          Float
+  taxAmount         Float
+  discountAmount    Float    @default(0)
+  totalAmount       Float
+
+  // ARCA/AFIP integration
+  arcaStatus        ArcaStatus @default(DRAFT)
+  arcaCae           String?  // CAE (authorization code)
+  arcaCaeExpiry     DateTime?
+  arcaResponse      Json?    // Full ARCA response stored as JSON
+  arcaSubmittedAt   DateTime?
+
+  // Status
+  status            InvoiceStatus @default(DRAFT)
+
+  // Additional data
+  notes             String?
+  internalNotes     String?  // Not visible to client
+  metadata          Json?    // Custom fields
+
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  items             InvoiceItem[]
+  webhookDeliveries WebhookDelivery[]
+
+  @@unique([userId, pointOfSaleId, invoiceNumber])
+  @@index([userId])
+  @@index([clientId])
+  @@index([arcaStatus])
+  @@index([status])
+  @@index([issueDate])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  // Item details
+  description String
+  quantity    Float
+  unitPrice   Float
+  taxRate     Float    // e.g., 21 for 21% IVA
+  discount    Float    @default(0)
+
+  // Calculated amounts
+  subtotal    Float
+  taxAmount   Float
+  totalAmount Float
+
+  // AFIP product codes
+  productCode String?  // Internal product code
+  afipCode    String?  // AFIP product classification
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+enum ArcaStatus {
+  DRAFT
+  PENDING
+  SUBMITTED
+  APPROVED
+  REJECTED
+  ERROR
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+// ============================================================================
+// CLIENTS (CUSTOMERS)
+// ============================================================================
+
+model Client {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Client details
+  name        String
+  taxId       String   // CUIT/CUIL/CDI
+  email       String?
+  phone       String?
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  country     String   @default("AR")
+
+  // AFIP classification
+  taxCategory String   // e.g., "Responsable Inscripto", "Monotributista"
+
+  // Status
+  isActive    Boolean  @default(true)
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  invoices    Invoice[]
+
+  @@unique([userId, taxId])
+  @@index([userId])
+  @@map("clients")
+}
+
+// ============================================================================
+// POINTS OF SALE
+// ============================================================================
+
+model PointOfSale {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Point of sale details
+  number           Int      // AFIP punto de venta number
+  name             String   // e.g., "Main Store", "Online Shop"
+  isActive         Boolean  @default(true)
+
+  // AFIP configuration
+  lastInvoiceNumber Int     @default(0)
+
+  // Timestamps
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  invoices         Invoice[]
+
+  @@unique([userId, number])
+  @@index([userId])
+  @@map("points_of_sale")
+}
+
+// ============================================================================
+// CERTIFICATES (X.509)
+// ============================================================================
+
+model Certificate {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Certificate details
+  name        String
+  certData    Bytes    // Encrypted certificate data
+  keyData     Bytes    // Encrypted private key
+  passphrase  String?  // Encrypted passphrase
+
+  // AFIP details
+  cuit        String
+  environment String   @default("production") // "production" or "testing"
+
+  // Status
+  isActive    Boolean  @default(true)
+  expiresAt   DateTime
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([cuit])
+  @@map("certificates")
+}
+
+// ============================================================================
+// WEBHOOKS
+// ============================================================================
+
+model WebhookSubscription {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Webhook configuration
+  url         String
+  events      String[] // e.g., ["invoice.created", "invoice.approved"]
+  secret      String   // For signing webhook payloads
+
+  // Status
+  isActive    Boolean  @default(true)
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  deliveries  WebhookDelivery[]
+
+  @@index([userId])
+  @@map("webhook_subscriptions")
+}
+
+model WebhookDelivery {
+  id                    String   @id @default(uuid())
+  webhookSubscriptionId String
+  subscription          WebhookSubscription @relation(fields: [webhookSubscriptionId], references: [id], onDelete: Cascade)
+
+  invoiceId             String?
+  invoice               Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  // Delivery details
+  event                 String   // e.g., "invoice.created"
+  payload               Json
+
+  // Status
+  status                WebhookStatus @default(PENDING)
+  attempts              Int      @default(0)
+  maxAttempts           Int      @default(5)
+  nextRetryAt           DateTime?
+
+  // Response
+  statusCode            Int?
+  responseBody          String?
+  errorMessage          String?
+
+  // Timestamps
+  createdAt             DateTime @default(now())
+  lastAttemptAt         DateTime?
+  deliveredAt           DateTime?
+
+  @@index([webhookSubscriptionId])
+  @@index([status])
+  @@index([nextRetryAt])
+  @@map("webhook_deliveries")
+}
+
+enum WebhookStatus {
+  PENDING
+  PROCESSING
+  DELIVERED
+  FAILED
+}
+
+// ============================================================================
+// INTEGRATIONS
+// ============================================================================
+
+model Integration {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Integration details
+  provider      String   // e.g., "shopify", "mercadolibre", "tiendanube"
+  providerUserId String? // User ID in external platform
+
+  // OAuth tokens
+  accessToken   String?  // Encrypted
+  refreshToken  String?  // Encrypted
+  tokenExpiresAt DateTime?
+
+  // Configuration
+  settings      Json?    // Provider-specific settings
+
+  // Sync status
+  isActive      Boolean  @default(true)
+  lastSyncAt    DateTime?
+  lastSyncStatus String?
+
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@map("integrations")
+}
+
+// ============================================================================
+// AUDIT LOGS
+// ============================================================================
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Action details
+  action      String   // e.g., "invoice.created", "user.updated"
+  entityType  String   // e.g., "invoice", "user"
+  entityId    String
+
+  // Changes
+  changes     Json?    // Before/after values
+
+  // Context
+  ipAddress   String?
+  userAgent   String?
+  apiKeyId    String?
+
+  // Timestamp
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
